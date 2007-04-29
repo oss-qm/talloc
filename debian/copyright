@@ -5,6 +5,7 @@ It was obtained from the Samba projects' Subversion repository.
 The tarball was created by running:
 svn export svn://svn.samba.org/samba/branches/SAMBA_4_0/source/lib/talloc talloc-VERSION
 svn export svn://svn.samba.org/samba/branches/SAMBA_4_0/source/lib/replace talloc-VERSION/libreplace
+cd talloc-VERSION && ./autogen.sh && cd ..
 tar cvz talloc-VERSION > talloc_VERSION.orig.tar.gz
 
 where VERSION should be replaced with the version of talloc (currently 1.0).
