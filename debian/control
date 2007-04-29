@@ -2,12 +2,11 @@ Source: talloc
 Section: devel
 Priority: optional
 Maintainer: Debian Samba Maintainers <samba-maint@alioth.debian.org>
-Build-Depends: debhelper (>= 5.0.37.2)
+Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40)
 Standards-Version: 3.7.2
-XS-Python-Version: >= 2.4
 XS-Vcs-Svn: svn://svn.debian.org/pkg-samba/trunk/talloc
 
-Package: libtalloc0
+Package: libtalloc1
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: Hierarchical pool based memory allocator

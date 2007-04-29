@@ -1,0 +1,38 @@
+diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
+--- talloc-1.0/Makefile.in	2007-04-25 16:18:22.000000000 +0200
++++ talloc-1.0-debian/Makefile.in	2007-04-30 01:15:47.000000000 +0200
+@@ -19,7 +19,9 @@
+ 
+ LIBOBJ = @TALLOCOBJ@ @LIBREPLACEOBJ@
+ 
+-all: showflags libtalloc.a testsuite $(EXTRA_TARGETS)
++SOLIB = libtalloc.so.1.0.0
++
++all: showflags libtalloc.a $(SOLIB) testsuite $(EXTRA_TARGETS)
+ 
+ showflags:
+ 	@echo 'talloc will be compiled with flags:'
+@@ -33,10 +35,14 @@
+ 	ar -rv $@ $(LIBOBJ)
+ 	@-ranlib $@
+ 
++$(SOLIB): $(LIBOBJ)
++	$(CC) -Wl,-soname,$(SOLIB) -shared -o $@ $^
++
+ install: all 
+ 	${INSTALLCMD} -d $(DESTDIR)${libdir}
+ 	${INSTALLCMD} -d $(DESTDIR)${libdir}/pkgconfig
+ 	${INSTALLCMD} -m 755 libtalloc.a $(DESTDIR)$(libdir)
++	${INSTALLCMD} -m 755 $(SOLIB) $(DESTDIR)$(libdir)
+ 	${INSTALLCMD} -d $(DESTDIR)${includedir}
+ 	${INSTALLCMD} -m 644 $(srcdir)/talloc.h $(DESTDIR)$(includedir)
+ 	${INSTALLCMD} -m 644 talloc.pc $(DESTDIR)$(libdir)/pkgconfig
+@@ -52,7 +58,7 @@
+ 	-test -z "$(XSLTPROC)" || $(XSLTPROC) --nonet -o $@ http://docbook.sourceforge.net/release/xsl/current/html/docbook.xsl $<
+ 
+ clean:
+-	rm -f *~ $(LIBOBJ) libtalloc.a testsuite testsuite.o *.gc?? talloc.3 talloc.3.html
++	rm -f *~ $(LIBOBJ) $(SOLIB) libtalloc.a testsuite testsuite.o *.gc?? talloc.3 talloc.3.html
+ 
+ test: testsuite
+ 	./testsuite

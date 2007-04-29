@@ -8,6 +8,8 @@ else
   CFLAGS += -O2
 endif
 
+include /usr/share/quilt/quilt.make
+
 DESTDIR=`pwd`/debian/tmp
 
 conf_args = --prefix=/usr
