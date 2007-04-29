@@ -28,6 +28,9 @@ build: configure build-stamp
 build-stamp:
 	dh_testdir
 	$(MAKE) all
+ifeq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
+	./testsuite
+endif
 	touch build-stamp
 
 clean:	clean-patched unpatch
@@ -51,19 +54,6 @@ install: build
 # Build architecture-independent files here.
 # Pass -i to all debhelper commands in this target to reduce clutter.
 binary-indep: build install
-	dh_testdir
-	dh_testroot
-	dh_installdebconf
-	dh_installdocs 
-	dh_installexamples 
-	dh_installchangelogs
-	dh_link
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
 
 # Build architecture-dependent files here.
 # Pass -a to all debhelper commands in this target to reduce clutter.
