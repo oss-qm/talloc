@@ -1,23 +1,32 @@
 diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
 --- talloc-1.0/Makefile.in	2007-04-25 16:18:22.000000000 +0200
-+++ talloc-1.0-debian/Makefile.in	2007-04-30 01:15:47.000000000 +0200
-@@ -19,7 +19,9 @@
++++ talloc-1.0-debian/Makefile.in	2007-04-30 02:26:26.000000000 +0200
+@@ -15,11 +15,17 @@
+ CFLAGS = @CFLAGS@ -DHAVE_CONFIG_H= -I. -I@srcdir@ -I@libreplacedir@
+ EXTRA_TARGETS = @DOC_TARGET@
+ 
+-.SUFFIXES: .c .o .3 .3.xml .xml .html
++.SUFFIXES: .c .o .po .3 .3.xml .xml .html
  
  LIBOBJ = @TALLOCOBJ@ @LIBREPLACEOBJ@
  
 -all: showflags libtalloc.a testsuite $(EXTRA_TARGETS)
 +SOLIB = libtalloc.so.1.0.0
++SONAME = libtalloc.so.1
++
++.c.po:
++	$(CC) -fPIC -o $@ -c $< $(CFLAGS)
 +
 +all: showflags libtalloc.a $(SOLIB) testsuite $(EXTRA_TARGETS)
  
  showflags:
  	@echo 'talloc will be compiled with flags:'
-@@ -33,10 +35,14 @@
+@@ -33,10 +39,14 @@
  	ar -rv $@ $(LIBOBJ)
  	@-ranlib $@
  
-+$(SOLIB): $(LIBOBJ)
-+	$(CC) -Wl,-soname,$(SOLIB) -shared -o $@ $^
++$(SOLIB): $(LIBOBJ:.o=.po)
++	$(CC) -Wl,-soname,$(SONAME) -shared -o $@ $^
 +
  install: all 
  	${INSTALLCMD} -d $(DESTDIR)${libdir}
@@ -27,7 +36,7 @@ diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
  	${INSTALLCMD} -d $(DESTDIR)${includedir}
  	${INSTALLCMD} -m 644 $(srcdir)/talloc.h $(DESTDIR)$(includedir)
  	${INSTALLCMD} -m 644 talloc.pc $(DESTDIR)$(libdir)/pkgconfig
-@@ -52,7 +58,7 @@
+@@ -52,7 +62,7 @@
  	-test -z "$(XSLTPROC)" || $(XSLTPROC) --nonet -o $@ http://docbook.sourceforge.net/release/xsl/current/html/docbook.xsl $<
  
  clean:
