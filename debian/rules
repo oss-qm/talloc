@@ -10,7 +10,7 @@ endif
 
 include /usr/share/quilt/quilt.make
 
-DESTDIR=`pwd`/debian/tmp
+DESTDIR=$(CURDIR)/debian/tmp
 
 conf_args = --prefix=/usr
 
@@ -44,7 +44,6 @@ clean-patched:
 	-$(MAKE) distclean
 	dh_clean
 
-install: DH_OPTIONS=$(DH_EXTRAS)
 install: build
 	dh_testdir
 	dh_testroot
@@ -58,13 +57,11 @@ install: build
 # Build architecture-dependent files here.
 # Pass -a to all debhelper commands in this target to reduce clutter.
 
-binary-arch: DH_OPTIONS=-a $(DH_EXTRAS)
+binary-arch: DH_OPTIONS=-a
 binary-arch: build install
 	dh_testdir
 	dh_testroot
 	dh_installdocs
-	dh_installexamples
-	dh_installcron 
 	dh_installchangelogs 
 	dh_strip
 	dh_link

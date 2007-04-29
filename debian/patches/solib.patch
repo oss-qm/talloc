@@ -1,3 +1,5 @@
+Adds rules to build a shared library version of talloc.
+
 diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
 --- talloc-1.0/Makefile.in	2007-04-25 16:18:22.000000000 +0200
 +++ talloc-1.0-debian/Makefile.in	2007-04-30 02:26:26.000000000 +0200
