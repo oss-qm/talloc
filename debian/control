@@ -2,21 +2,25 @@ Source: talloc
 Section: devel
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@samba.org>
-Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl
+Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc
 Standards-Version: 3.7.2
 XS-Vcs-Svn: svn://svn.debian.org/pkg-samba/trunk/talloc
 
 Package: libtalloc1
 Architecture: any
 Depends: ${shlibs:Depends}
+Section: libs
 Description: hierarchical pool based memory allocator
- A hierarchical pool based memory allocator with destructors. 
+ A hierarchical pool based memory allocator with destructors. It uses 
+ reference counting to determine when memory should be freed.
  .
  Homepage: http://talloc.samba.org/
 
 Package: libtalloc-dev
+Section: libdevel
 Architecture: any
 Description: hierarchical pool based memory allocator - development files
- A hierarchical pool based memory allocator with destructors. 
+ A hierarchical pool based memory allocator with destructors. It uses 
+ reference counting to determine when memory should be freed.
  .
  This package contains the development files.
