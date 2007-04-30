@@ -1,16 +1,14 @@
-Adds rules to build a shared library version of talloc.
-
-diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
---- talloc-1.0/Makefile.in	2007-04-25 16:18:22.000000000 +0200
-+++ talloc-1.0-debian/Makefile.in	2007-04-30 02:26:26.000000000 +0200
+diff -ur talloc-1.0/Makefile.in talloc-1.0-tmp/Makefile.in
+--- talloc-1.0/Makefile.in	2007-04-30 12:49:42.000000000 +0200
++++ talloc-1.0-tmp/Makefile.in	2007-04-30 15:30:45.000000000 +0200
 @@ -15,11 +15,17 @@
- CFLAGS = @CFLAGS@ -DHAVE_CONFIG_H= -I. -I@srcdir@ -I@libreplacedir@
+ CFLAGS = @CFLAGS@ -DHAVE_CONFIG_H= -I. -I@srcdir@
  EXTRA_TARGETS = @DOC_TARGET@
  
 -.SUFFIXES: .c .o .3 .3.xml .xml .html
 +.SUFFIXES: .c .o .po .3 .3.xml .xml .html
  
- LIBOBJ = @TALLOCOBJ@ @LIBREPLACEOBJ@
+ LIBOBJ = @TALLOC_OBJ@ @LIBREPLACEOBJ@
  
 -all: showflags libtalloc.a testsuite $(EXTRA_TARGETS)
 +SOLIB = libtalloc.so.1.0.0
@@ -31,8 +29,8 @@ diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
 +	$(CC) -Wl,-soname,$(SONAME) -shared -o $@ $^
 +
  install: all 
- 	${INSTALLCMD} -d $(DESTDIR)${libdir}
- 	${INSTALLCMD} -d $(DESTDIR)${libdir}/pkgconfig
+ 	${INSTALLCMD} -d $(DESTDIR)$(libdir)
+ 	${INSTALLCMD} -d $(DESTDIR)$(libdir)/pkgconfig
  	${INSTALLCMD} -m 755 libtalloc.a $(DESTDIR)$(libdir)
 +	${INSTALLCMD} -m 755 $(SOLIB) $(DESTDIR)$(libdir)
  	${INSTALLCMD} -d $(DESTDIR)${includedir}
@@ -47,3 +45,5 @@ diff -ur talloc-1.0/Makefile.in talloc-1.0-debian/Makefile.in
  
  test: testsuite
  	./testsuite
+Only in talloc-1.0-tmp: Makefile.in.orig
+Only in talloc-1.0-tmp: Makefile.in.rej
