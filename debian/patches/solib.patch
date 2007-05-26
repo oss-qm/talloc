@@ -11,7 +11,7 @@ diff -ur talloc-1.0/Makefile.in talloc-1.0-tmp/Makefile.in
  LIBOBJ = @TALLOC_OBJ@ @LIBREPLACEOBJ@
  
 -all: showflags libtalloc.a testsuite $(EXTRA_TARGETS)
-+SOLIB = libtalloc.so.1.0.0
++SOLIB = libtalloc.so.1.0.1
 +SONAME = libtalloc.so.1
 +
 +.c.po:
