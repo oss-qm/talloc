@@ -50,7 +50,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(DESTDIR)
-	ln -s libtalloc.so.1.0.0 $(DESTDIR)/usr/lib/libtalloc.so.1
+	ln -s libtalloc.so.1.0.1 $(DESTDIR)/usr/lib/libtalloc.so.1
 	ln -s libtalloc.so.1 $(DESTDIR)/usr/lib/libtalloc.so
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 
