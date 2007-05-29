@@ -18,6 +18,7 @@ Description: hierarchical pool based memory allocator
 
 Package: libtalloc-dev
 Section: libdevel
+Depends: libtalloc1 (=${Source-Version})
 Architecture: any
 Description: hierarchical pool based memory allocator - development files
  A hierarchical pool based memory allocator with destructors. It uses 
