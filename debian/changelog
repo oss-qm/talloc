@@ -1,8 +1,14 @@
+talloc (1.0.1-3) UNRELEASED; urgency=low
+
+  * Set homepage field.
+
+ -- Jelmer Vernooij <jelmer@samba.org>  Sun, 25 Nov 2007 16:30:33 +0000
+
 talloc (1.0.1-2) unstable; urgency=low
 
   * Make libtalloc-dev depend on libtalloc1. (Closes: #426444)
 
- -- Jelmer Vernooij <jelmer@samba.org>  Tue, 29 May 2007 14:44:18 +0200
+ -- Jelmer Vernooij <jelmer@samba.org>  Sun, 25 Nov 2007 16:30:00 +0000
 
 talloc (1.0.1-1) unstable; urgency=low
 
