@@ -1,7 +1,8 @@
-talloc (1.1.0~svn26116-1) UNRELEASED; urgency=low
+talloc (1.1.0~svn26116-1) unstable; urgency=low
 
   * Set homepage field.
   * New upstream snapshot.
+  * Allow Debian maintainer uploads.
 
  -- Jelmer Vernooij <jelmer@samba.org>  Sun, 25 Nov 2007 18:02:48 +0000
 
