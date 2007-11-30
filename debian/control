@@ -3,7 +3,7 @@ Section: devel
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@samba.org>
 Homepage: http://talloc.samba.org/
-Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc, libpopt-dev
+Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
 Standards-Version: 3.7.2
 Vcs-Svn: svn://svn.debian.org/pkg-samba/trunk/talloc
 XS-DM-Upload-Allowed: yes
