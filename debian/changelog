@@ -1,11 +1,12 @@
-talloc (1.1.0~svn26218-1) UNRELEASED; urgency=low
+talloc (1.1.0~svn26291-1) unstable; urgency=low
 
   * Support building twice in a row. (Closes: #442741)
   * Install SWIG file.
+  * Upload to unstable.
 
  -- Jelmer Vernooij <jelmer@samba.org>  Fri, 30 Nov 2007 18:49:19 +0100
 
-talloc (1.1.0~svn26116-1) unstable; urgency=low
+talloc (1.1.0~svn26116-1) experimental; urgency=low
 
   * Set homepage field.
   * New upstream snapshot.

@@ -49,6 +49,7 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
+	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	ln -s libtalloc.so.1.1.0 $(DESTDIR)/usr/lib/libtalloc.so.1
 	ln -s libtalloc.so.1.1.0 $(DESTDIR)/usr/lib/libtalloc.so
