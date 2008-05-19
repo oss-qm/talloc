@@ -7,12 +7,16 @@ if [ -z "$GIT_URL" ]; then
 	GIT_URL=git://git.samba.org/samba.git
 fi
 
+if [ -z "$REFSPEC" ]; then
+	REFSPEC=origin/v4-0-test
+fi
+
 TALLOCTMP=$TMPDIR/$RANDOM.talloc.git
 version=$( dpkg-parsechangelog -l`dirname $0`/changelog | sed -n 's/^Version: \(.*:\|\)//p' | sed 's/-[0-9.]\+$//' )
 git clone --depth 1 -l $GIT_URL $TALLOCTMP
 if [ ! -z "$REFSPEC" ]; then
 	pushd $TALLOCTMP
-	git checkout $REFSPEC
+	git checkout $REFSPEC || exit 1
 	popd
 fi
 
