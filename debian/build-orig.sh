@@ -1,18 +1,24 @@
-#!/bin/sh
-# Build a source tarball for talloc
+#!/bin/bash
+REFSPEC=$1
+GIT_URL=$2
+shift 2
 
-samba_repos=svn://svn.samba.org/samba
-version=$( dpkg-parsechangelog -l`dirname $0`/changelog | sed -n 's/^Version: \(.*:\|\)//p' | sed 's/-[0-9.]\+$//' )
-
-if echo $version | grep svn > /dev/null; then
-	# SVN Snapshot
-	revno=`echo $version | sed 's/^[0-9.]\+~svn//'`
-	svn export -r$revno $samba_repos/branches/SAMBA_4_0/source/lib/talloc talloc-$version
-	svn export -r$revno $samba_repos/branches/SAMBA_4_0/source/lib/replace talloc-$version/libreplace
-else
-	# Release
-	svn export $samba_repos/tags/TALLOC_`echo $version | sed 's/\./_/g'` talloc-$version
+if [ -z "$GIT_URL" ]; then
+	GIT_URL=git://git.samba.org/samba.git
 fi
 
-cd talloc-$version && ./autogen.sh && cd ..
-tar cvz talloc-$version > talloc_$version.orig.tar.gz
+TALLOCTMP=$TMPDIR/$RANDOM.talloc.git
+version=$( dpkg-parsechangelog -l`dirname $0`/changelog | sed -n 's/^Version: \(.*:\|\)//p' | sed 's/-[0-9.]\+$//' )
+git clone --depth 1 -l $GIT_URL $TALLOCTMP
+if [ ! -z "$REFSPEC" ]; then
+	pushd $TALLOCTMP
+	git checkout $REFSPEC
+	popd
+fi
+
+mv $TALLOCTMP/source/lib/talloc "talloc-$version"
+mv $TALLOCTMP/source/lib/replace "talloc-$version/libreplace"
+rm -rf $TALLOCTMP
+pushd "talloc-$version" && ./autogen.sh && popd
+tar cvz "talloc-$version" > "talloc_$version.orig.tar.gz"
+rm -rf "talloc-$version"

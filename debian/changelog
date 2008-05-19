@@ -1,3 +1,9 @@
+talloc (1.2.0~git20080520-1) unstable; urgency=low
+
+  * New upstream snapshot.
+
+ -- Jelmer Vernooij <jelmer@samba.org>  Tue, 20 May 2008 01:40:13 +0200
+
 talloc (1.1.0~svn26291-1) unstable; urgency=low
 
   * Support building twice in a row. (Closes: #442741)
