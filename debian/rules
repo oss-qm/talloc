@@ -71,7 +71,7 @@ binary-arch: build install
 	dh_link
 	dh_compress
 	dh_fixperms
-	dh_makeshlibs
+	dh_makeshlibs -V 'libtalloc1 (>= 1.2.0~git20080616-1)'
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
