@@ -15,7 +15,7 @@ talloc (1.2.0~git20080616-1) unstable; urgency=low
 
   * New upstream snapshot.
   * Fix symlink to library in package.
-  * Update license (now GPLv3) in copyright file.
+  * Update license (now LGPLv3) in copyright file.
   * Bump standards version to 3.8.0.
 
  -- Jelmer Vernooij <jelmer@samba.org>  Tue, 17 Jun 2008 03:02:55 +0200
