@@ -1,7 +1,7 @@
 Source: talloc
 Section: devel
 Priority: optional
-Maintainer: Jelmer Vernooij <jelmer@samba.org>
+Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
 Standards-Version: 3.8.0

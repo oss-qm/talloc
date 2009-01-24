@@ -1,0 +1,2 @@
+# talloc is maintained in git, and there are currently no upstream tarballs
+# "./debian/rules get-orig-source" will fetch the current snapshot from git
