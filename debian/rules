@@ -54,8 +54,8 @@ install: build
 	dh_installdirs
 	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
-	ln -s libtalloc.so.1.2.0 $(DESTDIR)/usr/lib/libtalloc.so.1
-	ln -s libtalloc.so.1.2.0 $(DESTDIR)/usr/lib/libtalloc.so
+	ln -s libtalloc.so.1.* $(DESTDIR)/usr/lib/libtalloc.so.1
+	ln -s libtalloc.so.1.* $(DESTDIR)/usr/lib/libtalloc.so
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 
 # Build architecture-dependent files here.
@@ -71,7 +71,7 @@ binary-arch: build install
 	dh_link
 	dh_compress
 	dh_fixperms
-	dh_makeshlibs -V 'libtalloc1 (>= 1.2.0~git20080616-1)'
+	dh_makeshlibs -V 'libtalloc1 (>= 1.2.1)'
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol

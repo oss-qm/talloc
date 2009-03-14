@@ -20,8 +20,8 @@ if [ ! -z "$REFSPEC" ]; then
 	popd
 fi
 
-mv $TALLOCTMP/source/lib/talloc "talloc-$version"
-mv $TALLOCTMP/source/lib/replace "talloc-$version/libreplace"
+mv $TALLOCTMP/lib/talloc "talloc-$version"
+mv $TALLOCTMP/lib/replace "talloc-$version/libreplace"
 rm -rf $TALLOCTMP
 pushd "talloc-$version" && ./autogen.sh && popd
 tar cvz "talloc-$version" > "talloc_$version.orig.tar.gz"

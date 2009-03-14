@@ -1,4 +1,4 @@
-talloc (1.2.0~git20080616-2) UNRELEASED; urgency=low
+talloc (1.2.1-1) unstable; urgency=low
 
   [ Steve Langasek ]
   * Bump the shlibs in libtalloc1, since previous versions of this package
@@ -8,8 +8,9 @@ talloc (1.2.0~git20080616-2) UNRELEASED; urgency=low
 
   [ Jelmer Vernooij ]
   * Add dummy watch file explaining how to obtain an upstream tarball.
+  * New upstream release.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sat, 24 Jan 2009 23:55:15 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 14 Mar 2009 18:48:57 +0100
 
 talloc (1.2.0~git20080616-1) unstable; urgency=low
 
