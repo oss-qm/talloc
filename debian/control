@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
-Standards-Version: 3.8.0
+Standards-Version: 3.8.1
 Vcs-Svn: svn://svn.debian.org/pkg-samba/trunk/talloc
 DM-Upload-Allowed: yes
 

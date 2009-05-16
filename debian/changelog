@@ -1,8 +1,9 @@
 talloc (1.3.0-1) unstable; urgency=low
 
   * New upstream release.
+  * Bump standards version to 3.8.1.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sat, 16 May 2009 02:57:53 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 16 May 2009 03:05:22 +0200
 
 talloc (1.2.1-1) unstable; urgency=low
 
