@@ -35,9 +35,6 @@ ifeq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
 endif
 	touch build-stamp
 
-get-orig-source:
-	./debian/build-orig.sh
-
 clean:	clean-patched unpatch
 
 clean-patched: 
