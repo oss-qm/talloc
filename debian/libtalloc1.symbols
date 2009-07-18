@@ -1,14 +1,17 @@
 libtalloc.so.1 libtalloc1 #MINVER#
  _talloc@Base 1.0.1
  _talloc_array@Base 1.0.1
+ _talloc_free@Base 1.4.0~git20090718
  _talloc_get_type_abort@Base 1.3.0
  _talloc_memdup@Base 1.0.1
  _talloc_move@Base 1.0.1
  _talloc_realloc@Base 1.0.1
  _talloc_realloc_array@Base 1.0.1
  _talloc_reference@Base 1.0.1
+ _talloc_reference_loc@Base 1.4.0~git20090718
  _talloc_set_destructor@Base 1.0.1
  _talloc_steal@Base 1.0.1
+ _talloc_steal_loc@Base 1.4.0~git20090718
  _talloc_zero@Base 1.0.1
  _talloc_zero_array@Base 1.0.1
  talloc_asprintf@Base 1.0.1
@@ -35,6 +38,7 @@ libtalloc.so.1 libtalloc1 #MINVER#
  talloc_pool@Base 1.2.0~git20080520
  talloc_realloc_fn@Base 1.0.1
  talloc_reference_count@Base 1.0.1
+ talloc_reparent@Base 1.4.0~git20090718
  talloc_report@Base 1.0.1
  talloc_report_depth_cb@Base 1.0.1
  talloc_report_depth_file@Base 1.0.1
