@@ -3,12 +3,12 @@ Section: devel
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Homepage: http://talloc.samba.org/
-Build-Depends: debhelper (>= 5.0.37.2), quilt (>= 0.40), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
+Build-Depends: debhelper (>= 5.0.37.2), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
 Standards-Version: 3.8.2
 Vcs-Svn: svn://svn.debian.org/pkg-samba/trunk/talloc
 DM-Upload-Allowed: yes
 
-Package: libtalloc1
+Package: libtalloc2
 Architecture: any
 Depends: ${shlibs:Depends}
 Section: libs
@@ -18,7 +18,7 @@ Description: hierarchical pool based memory allocator
 
 Package: libtalloc-dev
 Section: libdevel
-Depends: libtalloc1 (=${binary:Version})
+Depends: libtalloc2 (=${binary:Version})
 Architecture: any
 Description: hierarchical pool based memory allocator - development files
  A hierarchical pool based memory allocator with destructors. It uses 
