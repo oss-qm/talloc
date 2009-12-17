@@ -1,6 +1,7 @@
 talloc (2.0.1-1) UNRELEASED; urgency=low
 
   * New upstream release
+  * Switch to source format 3.0 (quilt)
   * Add myself to uploaders
 
  -- Christian Perrier <bubulle@debian.org>  Thu, 17 Dec 2009 22:13:17 +0100
