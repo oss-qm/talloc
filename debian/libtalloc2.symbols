@@ -21,6 +21,7 @@ libtalloc.so.2 libtalloc2 #MINVER#
  talloc_enable_leak_report@Base 2.0.0
  talloc_enable_leak_report_full@Base 2.0.0
  talloc_enable_null_tracking@Base 2.0.0
+ talloc_enable_null_tracking_no_autofree@Base 2.0.1
  talloc_find_parent_byname@Base 2.0.0
  talloc_free_children@Base 2.0.0
  talloc_get_name@Base 2.0.0
