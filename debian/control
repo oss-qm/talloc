@@ -2,6 +2,7 @@ Source: talloc
 Section: devel
 Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
+Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 5.0.37.2), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig
 Standards-Version: 3.8.3
