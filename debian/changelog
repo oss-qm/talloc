@@ -1,3 +1,10 @@
+talloc (2.0.1-2) UNRELEASED; urgency=low
+
+  * Update upstream location information in debian/copyright. Closes:
+    #561529
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 22 Feb 2010 11:44:45 +0100
+
 talloc (2.0.1-1) unstable; urgency=low
 
   * New upstream release
