@@ -1,3 +1,26 @@
+talloc (2.0.1-2) UNRELEASED; urgency=low
+
+  * Update upstream location information in debian/copyright. Closes:
+    #561529
+  * Add missing dependencies on ${misc:Depends}.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 14 Mar 2010 16:53:32 +0100
+
+talloc (2.0.1-1) unstable; urgency=low
+
+  * New upstream release
+  * Switch to source format 3.0 (quilt)
+  * Add myself to uploaders
+
+ -- Christian Perrier <bubulle@debian.org>  Thu, 17 Dec 2009 22:36:31 +0100
+
+talloc (2.0.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * Bump standards version to 3.8.3.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Fri, 11 Sep 2009 23:03:06 +0200
+
 talloc (1.4.0~git20090718-1) experimental; urgency=low
 
   * New upstream snapshot, required for Samba 4.

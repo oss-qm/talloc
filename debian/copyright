@@ -1,13 +1,7 @@
 Talloc was Debianized by Jelmer Vernooij <jelmer@samba.org> on 
 Mon Apr 30 01:48:43 CEST 2007.
 
-It was obtained from the Samba projects' Subversion repository. 
-The tarball was created by running:
-svn export svn://svn.samba.org/samba/tags/TALLOC_`echo -n $VERSION | tr . _` talloc-$VERSION
-cd talloc-$VERSION && ./autogen.sh && cd ..
-tar cvz talloc-$VERSION > talloc_$VERSION.orig.tar.gz
-
-where VERSION should be replaced with the version of talloc (currently 1.0).
+The upstream source tarball was retrieved from ftp://ftp.samba.org/pub/talloc.
 
 Talloc is copyright (C) 2004 Andrew Tridgell <tridge@samba.org> and 
 (C) 2006 Stefan Metzmacher <metze@samba.org> and published under the 

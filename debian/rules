@@ -8,8 +8,6 @@ else
 CFLAGS += -O2
 endif
 
-include /usr/share/quilt/quilt.make
-
 DESTDIR=$(CURDIR)/debian/tmp
 
 conf_args = --prefix=/usr
@@ -20,7 +18,7 @@ else
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 endif
 
-configure: patch configure-stamp
+configure: configure-stamp
 configure-stamp:
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
@@ -38,9 +36,7 @@ endif
 get-orig-source:
 	./debian/build-orig.sh
 
-clean:	clean-patched unpatch
-
-clean-patched: 
+clean: 
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
@@ -50,17 +46,16 @@ clean-patched:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
-	ln -s libtalloc.so.1.* $(DESTDIR)/usr/lib/libtalloc.so.1
-	ln -s libtalloc.so.1.* $(DESTDIR)/usr/lib/libtalloc.so
+	ln -s libtalloc.so.2.* $(DESTDIR)/usr/lib/libtalloc.so.2
+	ln -s libtalloc.so.2.* $(DESTDIR)/usr/lib/libtalloc.so
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 
 # Build architecture-dependent files here.
 # Pass -a to all debhelper commands in this target to reduce clutter.
-
 binary-arch: DH_OPTIONS=-a
 binary-arch: build install
 	dh_testdir
@@ -71,12 +66,14 @@ binary-arch: build install
 	dh_link
 	dh_compress
 	dh_fixperms
-	dh_makeshlibs -V 'libtalloc1 (>= 1.4.0~git20090718)' -- -c4
+	dh_makeshlibs -- -c4
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
 
-binary: binary-arch
-.PHONY: build clean binary-arch binary install configure patch unpatch
+binary-indep:
+
+binary: binary-arch binary-indep
+.PHONY: build clean binary-arch binary install configure 
