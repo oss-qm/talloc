@@ -1,10 +1,12 @@
-talloc (2.0.1-2) UNRELEASED; urgency=low
+talloc (2.0.3~git20100506-1) lucid; urgency=low
 
+  * New upstream snapshot.
+  * Bump standards version to 3.8.4.
   * Update upstream location information in debian/copyright. Closes:
     #561529
   * Add missing dependencies on ${misc:Depends}.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sun, 14 Mar 2010 16:53:32 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Thu, 06 May 2010 16:39:57 +0200
 
 talloc (2.0.1-1) unstable; urgency=low
 
