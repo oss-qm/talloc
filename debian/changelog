@@ -1,4 +1,4 @@
-talloc (2.0.3~git20100506-1) lucid; urgency=low
+talloc (2.0.3~git20100506-1) experimental; urgency=low
 
   * New upstream snapshot.
   * Bump standards version to 3.8.4.
