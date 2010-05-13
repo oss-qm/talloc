@@ -10,11 +10,8 @@ endif
 
 DESTDIR=$(CURDIR)/debian/tmp
 
-conf_args = --prefix=/usr --disable-rpath-install --disable-rpath
-
-ifneq ($(DEB_BUILD_GNU_TYPE), $(DEB_HOST_GNU_TYPE))
-conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE) --cross-compile
-endif
+conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE
+conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 
 configure: configure-stamp
 configure-stamp:
