@@ -1,4 +1,4 @@
-talloc (2.0.3~git20100517-1) lucid; urgency=low
+talloc (2.0.3~git20100517-1) experimental; urgency=low
 
   * New upstream snapshot.
 
