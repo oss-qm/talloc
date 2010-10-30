@@ -12,13 +12,13 @@ uninstall:
 	$(WAF) uninstall
 
 test:
-	$(WAF) test
+	$(WAF) test $(TEST_OPTIONS)
 
 testenv:
-	$(WAF) test --testenv
+	$(WAF) test --testenv $(TEST_OPTIONS)
 
 quicktest:
-	$(WAF) test --quick
+	$(WAF) test --quick $(TEST_OPTIONS)
 
 dist:
 	$(WAF) dist
@@ -34,6 +34,9 @@ distclean:
 
 reconfigure: configure
 	$(WAF) reconfigure
+
+show_waf_options:
+	$(WAF) --help
 
 # some compatibility make targets
 everything: all
@@ -52,6 +55,10 @@ etags:
 
 ctags:
 	$(WAF) ctags
+
+bin/%:: FORCE
+	$(WAF) --targets=`basename $@`
+FORCE:
 
 configure: autogen-waf.sh BUILDTOOLS/scripts/configure.waf
 	./autogen-waf.sh

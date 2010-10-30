@@ -571,8 +571,8 @@ static inline int _talloc_free_internal(void *ptr, const char *location)
 
 	if (unlikely(tc->refs)) {
 		int is_child;
-		/* check this is a reference from a child or grantchild
-		 * back to it's parent or grantparent
+		/* check if this is a reference from a child or
+		 * grandchild back to it's parent or grandparent
 		 *
 		 * in that case we need to remove the reference and
 		 * call another instance of talloc_free() on the current
@@ -1012,13 +1012,6 @@ _PUBLIC_ void *talloc_init(const char *fmt, ...)
 	va_list ap;
 	void *ptr;
 	const char *name;
-
-	/*
-	 * samba3 expects talloc_report_depth_cb(NULL, ...)
-	 * reports all talloc'ed memory, so we need to enable
-	 * null_tracking
-	 */
-	talloc_enable_null_tracking();
 
 	ptr = __talloc(NULL, 0);
 	if (unlikely(ptr == NULL)) return NULL;

@@ -1,6 +1,6 @@
 # Samba automatic dependency handling and project rules
 
-import Build, os, re, Environment, Logs
+import Build, os, re, Environment, Logs, time
 from samba_utils import *
 from samba_autoconf import *
 from samba_bundled import BUILTIN_LIBRARY
@@ -11,6 +11,12 @@ def ADD_GLOBAL_DEPENDENCY(ctx, dep):
     if not 'GLOBAL_DEPENDENCIES' in ctx.env:
         ctx.env.GLOBAL_DEPENDENCIES = []
     ctx.env.GLOBAL_DEPENDENCIES.append(dep)
+
+
+@conf
+def BREAK_CIRCULAR_LIBRARY_DEPENDENCIES(ctx):
+    '''indicate that circular dependencies between libraries should be broken.'''
+    ctx.env.ALLOW_CIRCULAR_LIB_DEPENDENCIES = True
 
 
 def TARGET_ALIAS(bld, target, alias):
@@ -41,29 +47,50 @@ Build.BuildContext.EXPAND_ALIAS = EXPAND_ALIAS
 
 def expand_subsystem_deps(bld):
     '''expand the reverse dependencies resulting from subsystem
-       attributes of modules'''
-    subsystems = LOCAL_CACHE(bld, 'INIT_FUNCTIONS')
+       attributes of modules. This is walking over the complete list
+       of declared subsystems, and expands the samba_deps_extended list for any
+       module<->subsystem dependencies'''
+
+    subsystem_list = LOCAL_CACHE(bld, 'INIT_FUNCTIONS')
     aliases    = LOCAL_CACHE(bld, 'TARGET_ALIAS')
     targets    = LOCAL_CACHE(bld, 'TARGET_TYPE')
 
-    for s in subsystems:
-        if s in aliases:
-            s = aliases[s]
-        bld.ASSERT(s in targets, "Subsystem target %s not declared" % s)
-        type = targets[s]
+    for subsystem_name in subsystem_list:
+        if subsystem_name in aliases:
+            subsystem_name = aliases[subsystem_name]
+        bld.ASSERT(subsystem_name in targets, "Subsystem target %s not declared" % subsystem_name)
+        type = targets[subsystem_name]
         if type == 'DISABLED' or type == 'EMPTY':
             continue
 
-        t = bld.name_to_obj(s, bld.env)
-        bld.ASSERT(t is not None, "Subsystem target %s not found" % s)
-        for d in subsystems[s]:
-            type = targets[d['TARGET']]
-            if type != 'DISABLED' and type != 'EMPTY':
-                t.samba_deps_extended.append(d['TARGET'])
-                t2 = bld.name_to_obj(d['TARGET'], bld.env)
-                t2.samba_includes_extended.extend(t.samba_includes_extended)
-                t2.samba_deps_extended.extend(t.samba_deps_extended)
-        t.samba_deps_extended = unique_list(t.samba_deps_extended)
+        # for example,
+        #    subsystem_name = dcerpc_server (a subsystem)
+        #    subsystem      = dcerpc_server (a subsystem object)
+        #    module_name    = rpc_epmapper (a module within the dcerpc_server subsystem)
+        #    module         = rpc_epmapper (a module object within the dcerpc_server subsystem)
+
+        subsystem = bld.name_to_obj(subsystem_name, bld.env)
+        bld.ASSERT(subsystem is not None, "Unable to find subsystem %s" % subsystem_name)
+        for d in subsystem_list[subsystem_name]:
+            module_name = d['TARGET']
+            module_type = targets[module_name]
+            if module_type in ['DISABLED', 'EMPTY']:
+                continue
+            bld.ASSERT(subsystem is not None,
+                       "Subsystem target %s for %s (%s) not found" % (subsystem_name, module_name, module_type))
+            if module_type in ['SUBSYSTEM']:
+                # if a module is a plain object type (not a library) then the
+                # subsystem it is part of needs to have it as a dependency, so targets
+                # that depend on this subsystem get the modules of that subsystem
+                subsystem.samba_deps_extended.append(module_name)
+            module = bld.name_to_obj(module_name, bld.env)
+            bld.ASSERT(module is not None, "Unable to find module %s in subsystem %s" % (module_name, subsystem_name))
+            module.samba_includes_extended.extend(subsystem.samba_includes_extended)
+            if targets[subsystem_name] in ['SUBSYSTEM']:
+                # if a subsystem is a plain object type (not a library) then any modules
+                # in that subsystem need to depend on the subsystem
+                module.samba_deps_extended.extend(subsystem.samba_deps_extended)
+        subsystem.samba_deps_extended = unique_list(subsystem.samba_deps_extended)
 
 
 
@@ -99,6 +126,7 @@ def build_dependencies(self):
         for l in self.uselib:
            up_list.append(l.upper())
         self.uselib = up_list
+
 
 def build_includes(self):
     '''This builds the right set of includes for a target.
@@ -140,7 +168,7 @@ def build_includes(self):
     for d in inc_deps:
         t = bld.name_to_obj(d, bld.env)
         bld.ASSERT(t is not None, "Unable to find dependency %s for %s" % (d, self.sname))
-        inclist = getattr(t, 'samba_includes_extended', [])
+        inclist = getattr(t, 'samba_includes_extended', [])[:]
         if getattr(t, 'local_include', True) == True:
             inclist.append('.')
         if inclist == []:
@@ -228,41 +256,53 @@ def add_init_functions(self):
 
 
 def check_duplicate_sources(bld, tgt_list):
-    '''see if we are compiling the same source file into multiple
-    subsystem targets for the same library or binary'''
+    '''see if we are compiling the same source file more than once
+       without an allow_duplicates attribute'''
 
     debug('deps: checking for duplicate sources')
 
     targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
     ret = True
 
-    seen = set()
+    global tstart
 
     for t in tgt_list:
-        obj_sources = getattr(t, 'source', '')
+        source_list = TO_LIST(getattr(t, 'source', ''))
         tpath = os.path.normpath(os_path_relpath(t.path.abspath(bld.env), t.env.BUILD_DIRECTORY + '/default'))
-        obj_sources = bld.SUBDIR(tpath, obj_sources)
-        t.samba_source_set = set(TO_LIST(obj_sources))
+	obj_sources = set()
+        for s in source_list:
+            p = os.path.normpath(os.path.join(tpath, s))
+            if p in obj_sources:
+                Logs.error("ERROR: source %s appears twice in target '%s'" % (p, t.sname))
+                sys.exit(1)
+            obj_sources.add(p)
+        t.samba_source_set = obj_sources
 
+    subsystems = {}
+
+    # build a list of targets that each source file is part of
     for t in tgt_list:
+        sources = []
         if not targets[t.sname] in [ 'LIBRARY', 'BINARY', 'PYTHON' ]:
             continue
-
-        sources = []
         for obj in t.add_objects:
             t2 = t.bld.name_to_obj(obj, bld.env)
             source_set = getattr(t2, 'samba_source_set', set())
-            sources.append( { 'dep':obj, 'src':source_set} )
-        for s in sources:
-            for s2 in sources:
-                if s['dep'] == s2['dep']: continue
-                common = s['src'].intersection(s2['src'])
-                if common.difference(seen):
-                    Logs.error("Target %s has duplicate source files in %s and %s : %s" % (t.sname,
-                                                                                      s['dep'], s2['dep'],
-                                                                                      common))
-                    seen = seen.union(common)
-                    ret = False
+            for s in source_set:
+                if not s in subsystems:
+                    subsystems[s] = {}
+                if not t.sname in subsystems[s]:
+                    subsystems[s][t.sname] = []
+                subsystems[s][t.sname].append(t2.sname)
+
+    for s in subsystems:
+        if len(subsystems[s]) > 1 and Options.options.SHOW_DUPLICATES:
+            Logs.warn("WARNING: source %s is in more than one target: %s" % (s, subsystems[s].keys()))
+        for tname in subsystems[s]:
+            if len(subsystems[s][tname]) > 1:
+                Logs.error("ERROR: source %s is in more than one subsystem of target '%s': %s" % (s, tname, subsystems[s][tname]))
+                sys.exit(1)
+                
     return ret
 
 
@@ -353,29 +393,72 @@ def add_samba_attributes(bld, tgt_list):
         t.samba_includes_extended = TO_LIST(t.samba_includes)[:]
         t.ccflags = getattr(t, 'samba_cflags', '')
 
+def replace_grouping_libraries(bld, tgt_list):
+    '''replace dependencies based on grouping libraries
+
+    If a library is marked as a grouping library, then any target that
+    depends on a subsystem that is part of that grouping library gets
+    that dependency replaced with a dependency on the grouping library
+    '''
+
+    targets  = LOCAL_CACHE(bld, 'TARGET_TYPE')
+
+    grouping = {}
+
+    # find our list of grouping libraries, mapped from the subsystems they depend on
+    for t in tgt_list:
+        if not getattr(t, 'grouping_library', False):
+            continue
+        for dep in t.samba_deps_extended:
+            if targets[dep] == 'SUBSYSTEM':
+                grouping[dep] = t.sname
+
+    # now replace any dependencies on elements of grouping libraries
+    for t in tgt_list:
+        for i in range(len(t.samba_deps_extended)):
+            dep = t.samba_deps_extended[i]
+            if dep in grouping:
+                if t.sname != grouping[dep]:
+                    debug("deps: target %s: replacing dependency %s with grouping library %s" % (t.sname, dep, grouping[dep]))
+                    t.samba_deps_extended[i] = grouping[dep]
+
+
 
 def build_direct_deps(bld, tgt_list):
     '''build the direct_objects and direct_libs sets for each target'''
 
     targets  = LOCAL_CACHE(bld, 'TARGET_TYPE')
     syslib_deps  = LOCAL_CACHE(bld, 'SYSLIB_DEPS')
+
     global_deps = bld.env.GLOBAL_DEPENDENCIES
+    global_deps_exclude = set()
+    for dep in global_deps:
+        t = bld.name_to_obj(dep, bld.env)
+        for d in t.samba_deps:
+            # prevent loops from the global dependencies list
+            global_deps_exclude.add(d)
+            global_deps_exclude.add(d + '.objlist')
 
     for t in tgt_list:
         t.direct_objects = set()
         t.direct_libs = set()
         t.direct_syslibs = set()
-        deps = t.samba_deps_extended
-        if getattr(t, 'samba_use_global_deps', False):
+        deps = t.samba_deps_extended[:]
+        if getattr(t, 'samba_use_global_deps', False) and not t.sname in global_deps_exclude:
             deps.extend(global_deps)
         for d in deps:
             d = EXPAND_ALIAS(bld, d)
             if d == t.sname: continue
             if not d in targets:
-                Logs.error("Unknown dependency %s in %s" % (d, t.sname))
+                Logs.error("Unknown dependency '%s' in '%s'" % (d, t.sname))
                 sys.exit(1)
             if targets[d] in [ 'EMPTY', 'DISABLED' ]:
                 continue
+            if targets[d] == 'PYTHON' and targets[t.sname] != 'PYTHON' and t.sname.find('.objlist') == -1:
+                # this check should be more restrictive, but for now we have pidl-generated python
+                # code that directly depends on other python modules
+                Logs.error('ERROR: Target %s has dependency on python module %s' % (t.sname, d))
+                sys.exit(1)
             if targets[d] == 'SYSLIB':
                 t.direct_syslibs.add(d)
                 if d in syslib_deps:
@@ -607,7 +690,7 @@ def break_dependency_loops(bld, tgt_list):
     # add in the replacement dependencies
     for t in tgt_list:
         for loop in loops:
-            for attr in ['direct_objects', 'indirect_objects', 'direct_libs', 'indirect_libs']:
+            for attr in ['indirect_objects', 'indirect_libs']:
                 objs = getattr(t, attr, set())
                 if loop in objs:
                     diff = loops[loop].difference(objs)
@@ -705,13 +788,17 @@ def calculate_final_deps(bld, tgt_list, loops):
             for l in t.final_libs.copy():
                 t2 = bld.name_to_obj(l, bld.env)
                 if t.sname in t2.final_libs:
-                    # we could break this in either direction. If one of the libraries
-                    # has a version number, and will this be distributed publicly, then
-                    # we should make it the lower level library in the DAG
-                    debug('deps: removing library loop %s from %s', t.sname, t2.sname)
-                    dependency_loop(loops, t, t2.sname)
-                    t2.final_libs.remove(t.sname)
-
+                    if getattr(bld.env, "ALLOW_CIRCULAR_LIB_DEPENDENCIES", False):
+                        # we could break this in either direction. If one of the libraries
+                        # has a version number, and will this be distributed publicly, then
+                        # we should make it the lower level library in the DAG
+                        Logs.warn('deps: removing library loop %s from %s' % (t.sname, t2.sname))
+                        dependency_loop(loops, t, t2.sname)
+                        t2.final_libs.remove(t.sname)
+                    else:
+                        Logs.error('ERROR: circular library dependency between %s and %s'
+                            % (t.sname, t2.sname))
+                        sys.exit(1)
 
     for loop in loops:
         debug('deps: Found dependency loops for target %s : %s', loop, loops[loop])
@@ -781,11 +868,66 @@ def calculate_final_deps(bld, tgt_list, loops):
     debug('deps: removed duplicate dependencies')
 
 
+def show_dependencies(bld, target, seen):
+    '''recursively show the dependencies of target'''
+
+    if target in seen:
+        return
+
+    t = bld.name_to_obj(target, bld.env)
+    if t is None:
+        Logs.error("ERROR: Unable to find target '%s'" % target)
+        sys.exit(1)
+
+    Logs.info('%s(OBJECTS): %s' % (target, t.direct_objects))
+    Logs.info('%s(LIBS): %s' % (target, t.direct_libs))
+    Logs.info('%s(SYSLIBS): %s' % (target, t.direct_syslibs))
+
+    seen.add(target)
+
+    for t2 in t.direct_objects:
+        show_dependencies(bld, t2, seen)
+
+
+def show_object_duplicates(bld, tgt_list):
+    '''show a list of object files that are included in more than
+    one library or binary'''
+
+    targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
+
+    used_by = {}
+
+    Logs.info("showing duplicate objects")
+
+    for t in tgt_list:
+        if not targets[t.sname] in [ 'LIBRARY', 'PYTHON' ]:
+            continue
+        for n in getattr(t, 'final_objects', set()):
+            t2 = bld.name_to_obj(n, bld.env)
+            if not n in used_by:
+                used_by[n] = set()
+            used_by[n].add(t.sname)
+
+    for n in used_by:
+        if len(used_by[n]) > 1:
+            Logs.info("target '%s' is used by %s" % (n, used_by[n]))
+
+    Logs.info("showing indirect dependency counts (sorted by count)")
+
+    def indirect_count(t1, t2):
+        return len(t2.indirect_objects) - len(t1.indirect_objects)
+
+    sorted_list = sorted(tgt_list, cmp=indirect_count)
+    for t in sorted_list:
+        if len(t.indirect_objects) > 1:
+            Logs.info("%s depends on %u indirect objects" % (t.sname, len(t.indirect_objects)))
+
+
 ######################################################################
 # this provides a way to save our dependency calculations between runs
 savedeps_version = 3
-savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags', 'source']
-savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags']
+savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags', 'source', 'grouping_library']
+savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags']
 savedeps_outenv  = ['INC_PATHS']
 savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES']
 savedeps_caches  = ['GLOBAL_DEPENDENCIES', 'TARGET_ALIAS', 'TARGET_TYPE', 'INIT_FUNCTIONS', 'SYSLIB_DEPS']
@@ -932,22 +1074,51 @@ def check_project_rules(bld):
 
     add_samba_attributes(bld, tgt_list)
 
-    if load_samba_deps(bld, tgt_list):
+    force_project_rules = (Options.options.SHOWDEPS or
+                           Options.options.SHOW_DUPLICATES)
+
+    if not force_project_rules and load_samba_deps(bld, tgt_list):
         return
 
+    global tstart
+    tstart = time.clock()
+
+    bld.new_rules = True    
     Logs.info("Checking project rules ...")
 
     debug('deps: project rules checking started')
 
     expand_subsystem_deps(bld)
+
+    debug("deps: expand_subsystem_deps: %f" % (time.clock() - tstart))
+
+    replace_grouping_libraries(bld, tgt_list)
+
+    debug("deps: replace_grouping_libraries: %f" % (time.clock() - tstart))
+
     build_direct_deps(bld, tgt_list)
+
+    debug("deps: build_direct_deps: %f" % (time.clock() - tstart))
+
     break_dependency_loops(bld, tgt_list)
+
+    debug("deps: break_dependency_loops: %f" % (time.clock() - tstart))
+
+    if Options.options.SHOWDEPS:
+            show_dependencies(bld, Options.options.SHOWDEPS, set())
+
     calculate_final_deps(bld, tgt_list, loops)
+
+    debug("deps: calculate_final_deps: %f" % (time.clock() - tstart))
+
+    if Options.options.SHOW_DUPLICATES:
+            show_object_duplicates(bld, tgt_list)
 
     # run the various attribute generators
     for f in [ build_dependencies, build_includes, add_init_functions ]:
         debug('deps: project rules checking %s', f)
         for t in tgt_list: f(t)
+        debug("deps: %s: %f" % (f, time.clock() - tstart))
 
     debug('deps: project rules stage1 completed')
 
@@ -957,16 +1128,25 @@ def check_project_rules(bld):
         Logs.error("Duplicate sources present - aborting")
         sys.exit(1)
 
+    debug("deps: check_duplicate_sources: %f" % (time.clock() - tstart))
+
     if not check_group_ordering(bld, tgt_list):
         Logs.error("Bad group ordering - aborting")
         sys.exit(1)
 
+    debug("deps: check_group_ordering: %f" % (time.clock() - tstart))
+
     show_final_deps(bld, tgt_list)
+
+    debug("deps: show_final_deps: %f" % (time.clock() - tstart))
 
     debug('deps: project rules checking completed - %u targets checked',
           len(tgt_list))
 
-    save_samba_deps(bld, tgt_list)
+    if not bld.is_install:
+        save_samba_deps(bld, tgt_list)
+
+    debug("deps: save_samba_deps: %f" % (time.clock() - tstart))
 
     Logs.info("Project rules pass")
 

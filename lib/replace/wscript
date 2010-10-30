@@ -20,7 +20,7 @@ samba_dist.DIST_DIRS('lib/replace buildtools:buildtools')
 
 def set_options(opt):
     opt.BUILTIN_DEFAULT('NONE')
-    opt.BUNDLED_EXTENSION_DEFAULT('')
+    opt.PRIVATE_EXTENSION_DEFAULT('')
     opt.RECURSE('buildtools/wafsamba')
 
 @wafsamba.runonce
@@ -29,9 +29,11 @@ def configure(conf):
 
     conf.DEFINE('LIBREPLACE_NETWORK_CHECKS', 1)
 
-    # on Tru64 certain features are only available with _OSF_SOURCE
+    # on Tru64 certain features are only available with _OSF_SOURCE set to 1
+    # and _XOPEN_SOURCE set to 600
     if conf.env['SYSTEM_UNAME_SYSNAME'] == 'OSF1':
         conf.DEFINE('_OSF_SOURCE', 1, add_to_cflags=True)
+        conf.DEFINE('_XOPEN_SOURCE', 600, add_to_cflags=True)
 
     conf.CHECK_HEADERS('crypt.h locale.h acl/libacl.h compat.h')
     conf.CHECK_HEADERS('acl/libacl.h attr/xattr.h compat.h ctype.h dustat.h')
@@ -42,7 +44,7 @@ def configure(conf):
     conf.CHECK_HEADERS('sys/fcntl.h sys/filio.h sys/filsys.h sys/fs/s5param.h sys/fs/vx/quota.h')
     conf.CHECK_HEADERS('sys/id.h sys/ioctl.h sys/ipc.h sys/mman.h sys/mode.h sys/ndir.h sys/priv.h')
     conf.CHECK_HEADERS('sys/resource.h sys/security.h sys/shm.h sys/statfs.h sys/statvfs.h sys/termio.h')
-    conf.CHECK_HEADERS('sys/vfs.h sys/xattr.h termio.h termios.h')
+    conf.CHECK_HEADERS('sys/vfs.h sys/xattr.h termio.h termios.h sys/file.h')
     conf.CHECK_HEADERS('sys/wait.h sys/stat.h malloc.h grp.h')
     conf.CHECK_HEADERS('sys/select.h setjmp.h utime.h sys/syslog.h syslog.h')
     conf.CHECK_HEADERS('stdarg.h vararg.h sys/mount.h mntent.h')
@@ -67,8 +69,7 @@ def configure(conf):
     conf.CHECK_HEADERS('utmp.h utmpx.h lastlog.h')
     conf.CHECK_HEADERS('syscall.h sys/syscall.h inttypes.h')
 
-    conf.CHECK_TYPES('"long long" intptr_t uintptr_t ptrdiff_t')
-    conf.CHECK_TYPES('comparison_fn_t bool')
+    conf.CHECK_TYPES('"long long" intptr_t uintptr_t ptrdiff_t comparison_fn_t')
     conf.CHECK_TYPE('_Bool', define='HAVE__Bool')
 
     conf.CHECK_TYPE('int8_t', 'char')
@@ -159,6 +160,23 @@ def configure(conf):
     conf.CHECK_FUNCS('link readlink symlink realpath snprintf vsnprintf')
     conf.CHECK_FUNCS('asprintf vasprintf setenv unsetenv strnlen strtoull __strtoull')
     conf.CHECK_FUNCS('strtouq strtoll __strtoll strtoq')
+    #Some OS (ie. freebsd) return EINVAL if the convertion could not be done, it's not what we expect
+    #Let's detect those cases
+    if conf.CONFIG_SET('HAVE_STRTOLL'):
+        conf.CHECK_CODE('''
+                        long long nb = strtoll("Text", NULL, 0);
+                        if (errno == EINVAL) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                        ''',
+                        msg="Checking correct behavior of strtoll",
+                        headers = 'errno.h',
+                        execute = True,
+                        define_ret = True,
+                        define = 'HAVE_BSD_STRTOLL',
+                        )
     conf.CHECK_FUNCS('if_nametoindex strerror_r')
     conf.CHECK_FUNCS('getdirentries getdents syslog')
     conf.CHECK_FUNCS('gai_strerror get_current_dir_name')
@@ -172,7 +190,11 @@ def configure(conf):
     conf.CHECK_C_PROTOTYPE('dlopen', 'void *dlopen(const char* filename, unsigned int flags)',
                            define='DLOPEN_TAKES_UNSIGNED_FLAGS', headers='dlfcn.h dl.h')
 
-    conf.CHECK_FUNCS_IN('fdatasync', 'rt', checklibc=True)
+    if conf.CHECK_FUNCS_IN('fdatasync', 'rt', checklibc=True):
+        # some systems are missing the declaration
+        conf.CHECK_DECLS('fdatasync')
+
+    conf.CHECK_FUNCS_IN('clock_gettime', 'rt', checklibc=True)
 
     # these headers need to be tested as a group on freebsd
     conf.CHECK_HEADERS(headers='sys/socket.h net/if.h', together=True)
@@ -202,10 +224,30 @@ def configure(conf):
         conf.DEFINE('HAVE_EPOLL', 1)
 
     if not conf.CHECK_CODE('''#define LIBREPLACE_CONFIGURE_TEST_STRPTIME
-		       #include "$libreplacedir/test/strptime.c"''',
+		       #include "test/strptime.c"''',
                            define='HAVE_STRPTIME',
+                           addmain=False,
                            msg='Checking for working strptime'):
         conf.DEFINE('REPLACE_STRPTIME', 1)
+    else:
+       conf.CHECK_CODE('''
+                        const char *s = "20070414101546Z";
+                        char *ret;
+                        struct tm t;
+                        memset(&t, 0, sizeof(t));
+                        ret = strptime(s, "%Y%m%d%H%M%S", &t);
+                        if (ret == NULL || t.tm_wday != 6) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                        ''',
+                        msg="Checking correct behavior of strptime",
+                        headers = 'time.h',
+                        execute = True,
+                        define_ret = True,
+                        define = 'REPLACE_STRPTIME',
+                        )
 
     if conf.CONFIG_SET('HAVE_KRB5_H'):
         # Check for KRB5_DEPRECATED handling
@@ -288,13 +330,6 @@ def configure(conf):
                         cflags=conf.env.VISIBILITY_CFLAGS,
                         define='HAVE_VISIBILITY_ATTR')
 
-    if not conf.CHECK_CODE('''#define LIBREPLACE_CONFIGURE_TEST_STRPTIME
-		       #include "$libreplacedir/test/strptime.c"''',
-                           define='HAVE_STRPTIME',
-                           msg='Checking for working strptime'):
-        conf.DEFINE('REPLACE_STRPTIME', 1)
-
-
     # look for a method of finding the list of network interfaces
     for method in ['HAVE_IFACE_GETIFADDRS', 'HAVE_IFACE_AIX', 'HAVE_IFACE_IFCONF', 'HAVE_IFACE_IFREQ']:
         if conf.CHECK_CODE('''
@@ -364,8 +399,13 @@ def build(bld):
     bld.SAMBA_LIBRARY('replace',
                       source=REPLACE_SOURCE,
                       group='base_libraries',
-                      hide_symbols=bld.BUILTIN_LIBRARY('replace'),
-                      deps='crypt dl nsl socket')
+					  # FIXME: Ideally symbols should be hidden here so they 
+					  # don't appear in the global namespace when Samba 
+					  # libraries are loaded, but this doesn't appear to work 
+					  # at the moment:
+					  # hide_symbols=bld.BUILTIN_LIBRARY('replace'),
+                      private_library=True,
+                      deps='crypt dl nsl socket rt')
 
     TEST_SOURCES = '''test/testsuite.c test/main.c test/strptime.c
                       test/os2_delete.c test/getifaddrs.c'''

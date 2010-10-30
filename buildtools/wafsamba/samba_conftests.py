@@ -34,17 +34,19 @@ def CHECK_LARGEFILE(conf, define='HAVE_LARGEFILE'):
 
 
 @conf
-def CHECK_C_PROTOTYPE(conf, function, prototype, define, headers=None):
+def CHECK_C_PROTOTYPE(conf, function, prototype, define, headers=None, msg=None):
     '''verify that a C prototype matches the one on the current system'''
     if not conf.CHECK_DECLS(function, headers=headers):
         return False
+    if not msg:
+        msg = 'Checking C prototype for %s' % function
     return conf.CHECK_CODE('%s; void *_x = (void *)%s' % (prototype, function),
                            define=define,
                            local_include=False,
                            headers=headers,
                            link=False,
                            execute=False,
-                           msg='Checking C prototype for %s' % function)
+                           msg=msg)
 
 
 @conf
@@ -240,7 +242,7 @@ WriteMakefile(
 
 
 @conf
-def CHECK_COMMAND(conf, cmd, msg=None, define=None, on_target=True):
+def CHECK_COMMAND(conf, cmd, msg=None, define=None, on_target=True, boolean=False):
     '''run a command and return result'''
     if msg is None:
         msg = 'Checking %s' % ' '.join(cmd)
@@ -253,10 +255,15 @@ def CHECK_COMMAND(conf, cmd, msg=None, define=None, on_target=True):
     except:
         conf.COMPOUND_END(False)
         return False
-    ret = ret.strip()
-    conf.COMPOUND_END(ret)
-    if define:
-        conf.DEFINE(define, ret, quote=True)
+    if boolean:
+        conf.COMPOUND_END('ok')
+        if define:
+            conf.DEFINE(define, '1')
+    else:
+        ret = ret.strip()
+        conf.COMPOUND_END(ret)
+        if define:
+            conf.DEFINE(define, ret, quote=True)
     return ret
 
 
@@ -302,4 +309,18 @@ def CHECK_INLINE(conf):
         conf.COMPOUND_END(i)
     return ret
 
+@conf
+def CHECK_XSLTPROC_MANPAGES(conf):
+    '''check if xsltproc can run with the given stylesheets'''
 
+
+    if not conf.CONFIG_SET('XSLTPROC'):
+        conf.find_program('xsltproc', var='XSLTPROC')
+    if not conf.CONFIG_SET('XSLTPROC'):
+        return False
+
+    s='http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl'
+    conf.CHECK_COMMAND('%s --nonet %s 2> /dev/null' % (conf.env.XSLTPROC, s),
+                             msg='Checking for stylesheet %s' % s,
+                             define='XSLTPROC_MANPAGES', on_target=False,
+                             boolean=True)
