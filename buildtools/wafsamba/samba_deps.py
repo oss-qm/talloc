@@ -19,30 +19,11 @@ def BREAK_CIRCULAR_LIBRARY_DEPENDENCIES(ctx):
     ctx.env.ALLOW_CIRCULAR_LIB_DEPENDENCIES = True
 
 
-def TARGET_ALIAS(bld, target, alias):
-    '''define an alias for a target name'''
-    cache = LOCAL_CACHE(bld, 'TARGET_ALIAS')
-    if alias in cache:
-        Logs.error("Target alias %s already set to %s : newalias %s" % (alias, cache[alias], target))
-        sys.exit(1)
-    cache[alias] = target
-Build.BuildContext.TARGET_ALIAS = TARGET_ALIAS
-
-
 @conf
 def SET_SYSLIB_DEPS(conf, target, deps):
     '''setup some implied dependencies for a SYSLIB'''
     cache = LOCAL_CACHE(conf, 'SYSLIB_DEPS')
     cache[target] = deps
-
-
-def EXPAND_ALIAS(bld, target):
-    '''expand a target name via an alias'''
-    aliases = LOCAL_CACHE(bld, 'TARGET_ALIAS')
-    if target in aliases:
-        return aliases[target]
-    return target
-Build.BuildContext.EXPAND_ALIAS = EXPAND_ALIAS
 
 
 def expand_subsystem_deps(bld):
@@ -52,12 +33,9 @@ def expand_subsystem_deps(bld):
        module<->subsystem dependencies'''
 
     subsystem_list = LOCAL_CACHE(bld, 'INIT_FUNCTIONS')
-    aliases    = LOCAL_CACHE(bld, 'TARGET_ALIAS')
     targets    = LOCAL_CACHE(bld, 'TARGET_TYPE')
 
     for subsystem_name in subsystem_list:
-        if subsystem_name in aliases:
-            subsystem_name = aliases[subsystem_name]
         bld.ASSERT(subsystem_name in targets, "Subsystem target %s not declared" % subsystem_name)
         type = targets[subsystem_name]
         if type == 'DISABLED' or type == 'EMPTY':
@@ -83,13 +61,6 @@ def expand_subsystem_deps(bld):
                 # subsystem it is part of needs to have it as a dependency, so targets
                 # that depend on this subsystem get the modules of that subsystem
                 subsystem.samba_deps_extended.append(module_name)
-            module = bld.name_to_obj(module_name, bld.env)
-            bld.ASSERT(module is not None, "Unable to find module %s in subsystem %s" % (module_name, subsystem_name))
-            module.samba_includes_extended.extend(subsystem.samba_includes_extended)
-            if targets[subsystem_name] in ['SUBSYSTEM']:
-                # if a subsystem is a plain object type (not a library) then any modules
-                # in that subsystem need to depend on the subsystem
-                module.samba_deps_extended.extend(subsystem.samba_deps_extended)
         subsystem.samba_deps_extended = unique_list(subsystem.samba_deps_extended)
 
 
@@ -232,14 +203,16 @@ def add_init_functions(self):
     if m is not None:
         modules.append(m)
 
-    if modules == []:
-        return
-
     sentinal = getattr(self, 'init_function_sentinal', 'NULL')
 
     targets    = LOCAL_CACHE(bld, 'TARGET_TYPE')
-
     cflags = getattr(self, 'samba_cflags', [])[:]
+
+    if modules == []:
+        cflags.append('-DSTATIC_%s_MODULES=%s' % (sname.replace('-','_'), sentinal))
+        self.ccflags = cflags
+        return
+
     for m in modules:
         bld.ASSERT(m in subsystems,
                    "No init_function defined for module '%s' in target '%s'" % (m, self.sname))
@@ -410,6 +383,7 @@ def replace_grouping_libraries(bld, tgt_list):
         if not getattr(t, 'grouping_library', False):
             continue
         for dep in t.samba_deps_extended:
+            bld.ASSERT(dep in targets, "grouping library target %s not declared in %s" % (dep, t.sname))
             if targets[dep] == 'SUBSYSTEM':
                 grouping[dep] = t.sname
 
@@ -447,7 +421,6 @@ def build_direct_deps(bld, tgt_list):
         if getattr(t, 'samba_use_global_deps', False) and not t.sname in global_deps_exclude:
             deps.extend(global_deps)
         for d in deps:
-            d = EXPAND_ALIAS(bld, d)
             if d == t.sname: continue
             if not d in targets:
                 Logs.error("Unknown dependency '%s' in '%s'" % (d, t.sname))
@@ -754,6 +727,25 @@ def reduce_objects(bld, tgt_list):
     return True
 
 
+def show_library_loop(bld, lib1, lib2, path, seen):
+    '''show the detailed path of a library loop between lib1 and lib2'''
+
+    t = bld.name_to_obj(lib1, bld.env)
+    if not lib2 in getattr(t, 'final_libs', set()):
+        return
+
+    for d in t.samba_deps_extended:
+        if d in seen:
+            continue
+        seen.add(d)
+        path2 = path + '=>' + d
+        if d == lib2:
+            Logs.warn('library loop path: ' + path2)
+            return
+        show_library_loop(bld, d, lib2, path2, seen)
+        seen.remove(d)
+
+
 def calculate_final_deps(bld, tgt_list, loops):
     '''calculate the final library and object dependencies'''
     for t in tgt_list:
@@ -771,6 +763,9 @@ def calculate_final_deps(bld, tgt_list, loops):
     # handle any non-shared binaries
     for t in tgt_list:
         if t.samba_type == 'BINARY' and bld.NONSHARED_BINARY(t.sname):
+            subsystem_list = LOCAL_CACHE(bld, 'INIT_FUNCTIONS')
+            targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
+
             # replace lib deps with objlist deps
             for l in t.final_libs:
                 objname = l + '.objlist'
@@ -780,6 +775,22 @@ def calculate_final_deps(bld, tgt_list, loops):
                     sys.exit(1)
                 t.final_objects.add(objname)
                 t.final_objects = t.final_objects.union(extended_objects(bld, t2, set()))
+                if l in subsystem_list:
+                    # its a subsystem - we also need the contents of any modules
+                    for d in subsystem_list[l]:
+                        module_name = d['TARGET']
+                        if targets[module_name] == 'LIBRARY':
+                            objname = module_name + '.objlist'
+                        elif targets[module_name] == 'SUBSYSTEM':
+                            objname = module_name
+                        else:
+                            continue
+                        t2 = bld.name_to_obj(objname, bld.env)
+                        if t2 is None:
+                            Logs.error('ERROR: subsystem %s not found' % objname)
+                            sys.exit(1)
+                        t.final_objects.add(objname)
+                        t.final_objects = t.final_objects.union(extended_objects(bld, t2, set()))
             t.final_libs = set()
 
     # find any library loops
@@ -798,6 +809,8 @@ def calculate_final_deps(bld, tgt_list, loops):
                     else:
                         Logs.error('ERROR: circular library dependency between %s and %s'
                             % (t.sname, t2.sname))
+                        show_library_loop(bld, t.sname, t2.sname, t.sname, set())
+                        show_library_loop(bld, t2.sname, t.sname, t2.sname, set())
                         sys.exit(1)
 
     for loop in loops:
@@ -927,10 +940,10 @@ def show_object_duplicates(bld, tgt_list):
 # this provides a way to save our dependency calculations between runs
 savedeps_version = 3
 savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags', 'source', 'grouping_library']
-savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags']
+savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags', 'samba_deps_extended']
 savedeps_outenv  = ['INC_PATHS']
 savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES']
-savedeps_caches  = ['GLOBAL_DEPENDENCIES', 'TARGET_ALIAS', 'TARGET_TYPE', 'INIT_FUNCTIONS', 'SYSLIB_DEPS']
+savedeps_caches  = ['GLOBAL_DEPENDENCIES', 'TARGET_TYPE', 'INIT_FUNCTIONS', 'SYSLIB_DEPS']
 savedeps_files   = ['buildtools/wafsamba/samba_deps.py']
 
 def save_samba_deps(bld, tgt_list):
@@ -1056,21 +1069,10 @@ def load_samba_deps(bld, tgt_list):
 def check_project_rules(bld):
     '''check the project rules - ensuring the targets are sane'''
 
-    targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
     loops = {}
     inc_loops = {}
 
-    # build a list of task generators we are interested in
-    tgt_list = []
-    for tgt in targets:
-        type = targets[tgt]
-        if not type in ['SUBSYSTEM', 'MODULE', 'BINARY', 'LIBRARY', 'ASN1', 'PYTHON']:
-            continue
-        t = bld.name_to_obj(tgt, bld.env)
-        if t is None:
-            Logs.error("Target %s of type %s has no task generator" % (tgt, type))
-            sys.exit(1)
-        tgt_list.append(t)
+    tgt_list = get_tgt_list(bld)
 
     add_samba_attributes(bld, tgt_list)
 
