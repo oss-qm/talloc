@@ -1,6 +1,17 @@
+talloc (2.0.3~git20101030a-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Bump standards version to 3.9.1 (no changes).
+  * New upstream release.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sat, 30 Oct 2010 15:47:15 +0200
+
 talloc (2.0.3~git20101030-1) UNRELEASED; urgency=low
 
   * New upstream release.
+   + Fixes example include line in manual page. Closes: #588393
+   + Removes manual page mention of deprecated talloc_append_string,
+     consistent with other deprecated functionality. Closes: #601205
   * Bump standards version to 3.9.1 (no changes).
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 30 Oct 2010 08:42:43 +0200
