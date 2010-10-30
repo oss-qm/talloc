@@ -7,8 +7,6 @@ import Options
 from TaskGen import feature, before, after
 from samba_utils import *
 
-O755 = 493
-
 @feature('install_bin')
 @after('apply_core')
 @before('apply_link', 'apply_obj_vars')
@@ -26,7 +24,7 @@ def install_binary(self):
         return
 
     # work out the install path, expanding variables
-    install_path = self.samba_inst_path or '${BINDIR}'
+    install_path = getattr(self, 'samba_inst_path', None) or '${BINDIR}'
     install_path = bld.EXPAND_VARIABLES(install_path)
 
     orig_target = os.path.basename(self.target)
@@ -43,7 +41,7 @@ def install_binary(self):
     # tell waf to install the right binary
     bld.install_as(os.path.join(install_path, orig_target),
                    os.path.join(self.path.abspath(bld.env), self.target),
-                   chmod=O755)
+                   chmod=MODE_755)
 
 
 
@@ -60,13 +58,13 @@ def install_library(self):
     install_ldflags = install_rpath(bld)
     build_ldflags   = build_rpath(bld)
 
-    if not Options.is_install or not self.samba_install:
+    if not Options.is_install or not getattr(self, 'samba_install', True):
         # just need to set the build rpath if we are not installing
         self.env.RPATH = build_ldflags
         return
 
     # setup the install path, expanding variables
-    install_path = self.samba_inst_path or '${LIBDIR}'
+    install_path = getattr(self, 'samba_inst_path', None) or '${LIBDIR}'
     install_path = bld.EXPAND_VARIABLES(install_path)
 
     if install_ldflags != build_ldflags:
@@ -85,25 +83,33 @@ def install_library(self):
 
     dev_link     = None
 
-    if self.samba_realname:
+    if getattr(self, 'samba_realname', None):
         install_name = self.samba_realname
         install_link = None
         if getattr(self, 'samba_type', None) == 'PYTHON':
-            inst_name    = '%s.so' % t.target
+            inst_name    = bld.make_libname(t.target, nolibprefix=True, python=True)
         else:
-            inst_name    = 'lib%s.so' % t.target
+            inst_name    = bld.make_libname(t.target)
     elif self.vnum:
         vnum_base    = self.vnum.split('.')[0]
-        install_name = 'lib%s.so.%s' % (self.target, self.vnum)
-        install_link = 'lib%s.so.%s' % (self.target, vnum_base)
-        inst_name    = 'lib%s.so' % t.target
-        if self.target == self.name:
+        install_name = bld.make_libname(self.target, version=self.vnum)
+        install_link = bld.make_libname(self.target, version=vnum_base)
+        inst_name    = bld.make_libname(t.target)
+        if not self.private_library:
             # only generate the dev link for non-bundled libs
-            dev_link     = 'lib%s.so' % self.target
+            dev_link     = bld.make_libname(self.target)
+    elif getattr(self, 'soname', ''):
+        install_name = bld.make_libname(self.target)
+        install_link = self.soname
+        inst_name    = bld.make_libname(t.target)
     else:
-        install_name = 'lib%s.so' % self.target
+        install_name = bld.make_libname(self.target)
         install_link = None
-        inst_name    = 'lib%s.so' % t.target
+        inst_name    = bld.make_libname(t.target)
+
+    if t.env.SONAME_ST and install_link:
+        t.env.append_value('LINKFLAGS', t.env.SONAME_ST % install_link)
+        t.env.SONAME_ST = ''
 
     # tell waf to install the library
     bld.install_as(os.path.join(install_path, install_name),
@@ -117,6 +123,15 @@ def install_library(self):
                        install_name)
 
 
+@feature('cshlib')
+@after('apply_implib')
+@before('apply_vnum')
+def apply_soname(self):
+    '''install a library, taking account of the different rpath varients'''
+
+    if self.env.SONAME_ST and getattr(self, 'soname', ''):
+        self.env.append_value('LINKFLAGS', self.env.SONAME_ST % self.soname)
+        self.env.SONAME_ST = ''
 
 ##############################
 # handle the creation of links for libraries and binaries in the build tree
@@ -140,7 +155,7 @@ def symlink_lib(self):
 
     link_target = getattr(self, 'link_name', '')
     if link_target == '':
-        link_target = '%s/lib%s.so%s' % (LIB_PATH, self.target, soext)
+        link_target = '%s/%s' % (LIB_PATH, self.bld.make_libname(self.target, version=soext))
 
     link_target = os.path.join(blddir, link_target)
 
@@ -148,6 +163,11 @@ def symlink_lib(self):
         if os.path.islink(link_target) and os.readlink(link_target) == libpath:
             return
         os.unlink(link_target)
+
+    link_container = os.path.dirname(link_target)
+    if not os.path.isdir(link_container):
+        os.makedirs(link_container)
+
     os.symlink(libpath, link_target)
 
 

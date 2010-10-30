@@ -27,15 +27,15 @@ def set_options(opt):
                    help=("comma separated list of bundled libraries. May include !LIBNAME to disable bundling a library. Can be 'NONE' or 'ALL' [auto]"),
                    action="store", dest='BUNDLED_LIBS', default='')
 
-    extension_default = Options.options['BUNDLED_EXTENSION_DEFAULT']
-    gr.add_option('--bundled-library-extension',
-                   help=("name extension for bundled libraries [%s]" % extension_default),
-                   action="store", dest='BUNDLED_EXTENSION', default=extension_default)
+    extension_default = Options.options['PRIVATE_EXTENSION_DEFAULT']
+    gr.add_option('--private-library-extension',
+                   help=("name extension for private libraries [%s]" % extension_default),
+                   action="store", dest='PRIVATE_EXTENSION', default=extension_default)
 
-    extension_exception = Options.options['BUNDLED_EXTENSION_EXCEPTION']
-    gr.add_option('--bundled-extension-exception',
-                   help=("comman separated list of libraries to not apply extension to [%s]" % extension_exception),
-                   action="store", dest='BUNDLED_EXTENSION_EXCEPTION', default=extension_exception)
+    extension_exception = Options.options['PRIVATE_EXTENSION_EXCEPTION']
+    gr.add_option('--private-extension-exception',
+                   help=("comma separated list of libraries to not apply extension to [%s]" % extension_exception),
+                   action="store", dest='PRIVATE_EXTENSION_EXCEPTION', default=extension_exception)
 
     builtin_defauilt = Options.options['BUILTIN_LIBRARIES_DEFAULT']
     gr.add_option('--builtin-libraries',
@@ -82,7 +82,7 @@ def set_options(opt):
                    action="store_true", dest='fatal_errors', default=False)
     gr.add_option('--enable-gccdeps',
                    help=("Enable use of gcc -MD dependency module"),
-                   action="store_true", dest='enable_gccdeps', default=False)
+                   action="store_true", dest='enable_gccdeps', default=True)
     gr.add_option('--timestamp-dependencies',
                    help=("use file timestamps instead of content for build dependencies (BROKEN)"),
                    action="store_true", dest='timestamp_dependencies', default=False)
@@ -99,6 +99,14 @@ def set_options(opt):
     gr.add_option('--abi-update',
 		   help=("Update ABI signature files for libraries"),
 		   action='store_true', dest='ABI_UPDATE', default=False)
+
+    gr.add_option('--show-deps',
+		   help=("Show dependency tree for the given target"),
+		   dest='SHOWDEPS', default='')
+
+    gr.add_option('--show-duplicates',
+                  help=("Show objects which are included in multiple binaries or libraries"),
+                  action='store_true', dest='SHOW_DUPLICATES', default=False)
 
     gr = opt.add_option_group('cross compilation options')
 
@@ -130,6 +138,14 @@ def set_options(opt):
 		   help=SUPPRESS_HELP,
 		   action='store_true', dest='AUTOCONF_DISABLE_DEPENDENCY_TRACKING', default=False)
 
+    gr = opt.option_group('dist options')
+    gr.add_option('--sign-release',
+                   help='sign the release tarball created by waf dist',
+                   action='store_true', dest='SIGN_RELEASE')
+    gr.add_option('--tag',
+                   help='tag release in git at the same time',
+                   type='string', action='store', dest='TAG_RELEASE')
+
 
 @wafsamba.runonce
 def configure(conf):
@@ -152,9 +168,29 @@ def configure(conf):
     # we need git for 'waf dist'
     conf.find_program('git', var='GIT')
 
+    # older gcc versions (< 4.4) does not work with gccdeps, so we have to see if the .d file is generated
     if Options.options.enable_gccdeps:
-        # don't enable gccdeps by default as it needs a very recent version gcc
-        conf.check_tool('gccdeps', tooldir=conf.srcdir + "/buildtools/wafsamba")
+        from TaskGen import feature, after
+        @feature('testd')
+        @after('apply_core')
+        def check_d(self):
+            tsk = self.compiled_tasks[0]
+            tsk.outputs.append(tsk.outputs[0].change_ext('.d'))
+
+        import Task
+        cc = Task.TaskBase.classes['cc']
+        oldmeth = cc.run
+
+        cc.run = Task.compile_fun_noshell('cc', '${CC} ${CCFLAGS} ${CPPFLAGS} ${_CCINCFLAGS} ${_CCDEFFLAGS} ${CC_SRC_F}${SRC} ${CC_TGT_F}${TGT[0].abspath(env)}')[0]
+        try:
+            try:
+                conf.check(features='cc testd', fragment='int main() {return 0;}\n', ccflags=['-MD'], mandatory=True, msg='Check for -MD')
+            except:
+                pass
+            else:
+                conf.check_tool('gccdeps', tooldir=conf.srcdir + "/buildtools/wafsamba")
+        finally:
+            cc.run = oldmeth
 
     # make the install paths available in environment
     conf.env.LIBDIR = Options.options.LIBDIR or '${PREFIX}/lib'
@@ -166,8 +202,8 @@ def configure(conf):
     conf.env.DISABLE_SHARED = Options.options.disable_shared
     conf.env.NONSHARED_BINARIES = Options.options.NONSHARED_BINARIES.split(',')
 
-    conf.env.BUNDLED_EXTENSION = Options.options.BUNDLED_EXTENSION
-    conf.env.BUNDLED_EXTENSION_EXCEPTION = Options.options.BUNDLED_EXTENSION_EXCEPTION.split(',')
+    conf.env.PRIVATE_EXTENSION = Options.options.PRIVATE_EXTENSION
+    conf.env.PRIVATE_EXTENSION_EXCEPTION = Options.options.PRIVATE_EXTENSION_EXCEPTION.split(',')
 
     conf.env.CROSS_COMPILE = Options.options.CROSS_COMPILE
     conf.env.CROSS_EXECUTE = Options.options.CROSS_EXECUTE
@@ -224,8 +260,19 @@ def configure(conf):
         conf.env.RPATH_ON_BUILD   = False
 
     # we should use the PIC options in waf instead
-    conf.ADD_CFLAGS('-fPIC', testflags=True)
+    # Some compilo didn't support -fPIC but just print a warning
+    if conf.env['COMPILER_CC'] == "suncc":
+        conf.ADD_CFLAGS('-KPIC', testflags=True)
+        # we really want define here as we need to have this
+        # define even during the tests otherwise detection of
+        # boolean is broken
+        conf.DEFINE('_STDC_C99', 1, add_to_cflags=True)
+        conf.DEFINE('_XPG6', 1, add_to_cflags=True)
+    else:
+        conf.ADD_CFLAGS('-fPIC', testflags=True)
 
+    if sys.platform == 'darwin':
+        conf.ADD_LDFLAGS('-fno-common', testflags=True)
     conf.CHECK_INLINE()
 
     # check for pkgconfig
@@ -252,7 +299,12 @@ def configure(conf):
     if 'HAVE_SYS_TIME_H' in conf.env and 'HAVE_TIME_H' in conf.env:
         conf.DEFINE('TIME_WITH_SYS_TIME', 1)
 
-    conf.define('SHLIBEXT', "so", quote=True)
+    # cope with different extensions for libraries
+    (root, ext) = os.path.splitext(conf.env.shlib_PATTERN)
+    if ext[0] == '.':
+        conf.define('SHLIBEXT', ext[1:], quote=True)
+    else:
+        conf.define('SHLIBEXT', "so", quote=True)
 
     conf.CHECK_CODE('long one = 1; return ((char *)(&one))[0]',
                     execute=True,

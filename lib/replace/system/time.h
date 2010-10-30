@@ -66,4 +66,19 @@ int rep_utime(const char *filename, const struct utimbuf *buf);
 int rep_utimes(const char *filename, const struct timeval tv[2]);
 #endif
 
+#ifndef HAVE_CLOCK_GETTIME
+/* CLOCK_REALTIME is required by POSIX */
+#define CLOCK_REALTIME 0
+typedef int clockid_t;
+int rep_clock_gettime(clockid_t clk_id, struct timespec *tp);
+#endif
+/* make sure we have a best effort CUSTOM_CLOCK_MONOTONIC we can rely on */
+#if defined(CLOCK_MONOTONIC)
+#define CUSTOM_CLOCK_MONOTONIC CLOCK_MONOTONIC
+#elif defined(CLOCK_HIGHRES)
+#define CUSTOM_CLOCK_MONOTONIC CLOCK_HIGHRES
+#else
+#define CUSTOM_CLOCK_MONOTONIC CLOCK_REALTIME
+#endif
+
 #endif

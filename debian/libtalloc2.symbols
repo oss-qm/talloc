@@ -12,6 +12,12 @@ libtalloc.so.2 libtalloc2 #MINVER#
  _talloc_steal_loc@Base 2.0.0
  _talloc_zero@Base 2.0.0
  _talloc_zero_array@Base 2.0.0
+ (optional)dummy_snprintf@Base 2.0.0
+ (optional)rep_getpass@Base 2.0.0
+ (optional)rep_strerror_r@Base 2.0.0
+ (optional)rep_strlcat@Base 2.0.0
+ (optional)rep_strlcpy@Base 2.0.0
+ (optional)replace_dummy@Base 2.0.0
  talloc_asprintf@Base 2.0.0
  talloc_asprintf_append@Base 2.0.0
  talloc_asprintf_append_buffer@Base 2.0.0

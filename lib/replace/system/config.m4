@@ -1,7 +1,7 @@
 # filesys
 AC_HEADER_DIRENT 
 AC_CHECK_HEADERS(fcntl.h sys/fcntl.h sys/resource.h sys/ioctl.h sys/mode.h sys/filio.h sys/fs/s5param.h sys/filsys.h)
-AC_CHECK_HEADERS(sys/acl.h acl/libacl.h)
+AC_CHECK_HEADERS(sys/acl.h acl/libacl.h sys/file.h)
 
 # select
 AC_CHECK_HEADERS(sys/select.h)
@@ -10,6 +10,16 @@ AC_CHECK_HEADERS(sys/select.h)
 AC_CHECK_HEADERS(sys/time.h utime.h)
 AC_HEADER_TIME
 AC_CHECK_FUNCS(utime utimes)
+
+AC_CACHE_CHECK([if gettimeofday takes TZ argument],libreplace_cv_HAVE_GETTIMEOFDAY_TZ,[
+AC_TRY_RUN([
+#include <sys/time.h>
+#include <unistd.h>
+main() { struct timeval tv; exit(gettimeofday(&tv, NULL));}],
+           libreplace_cv_HAVE_GETTIMEOFDAY_TZ=yes,libreplace_cv_HAVE_GETTIMEOFDAY_TZ=no,libreplace_cv_HAVE_GETTIMEOFDAY_TZ=yes)])
+if test x"$libreplace_cv_HAVE_GETTIMEOFDAY_TZ" = x"yes"; then
+    AC_DEFINE(HAVE_GETTIMEOFDAY_TZ,1,[Whether gettimeofday() is available])
+fi
 
 # wait
 AC_HEADER_SYS_WAIT
