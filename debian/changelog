@@ -1,4 +1,4 @@
-talloc (2.0.3~git20101030b-1) UNRELEASED; urgency=low
+talloc (2.0.3~git20101030b-1) experimental; urgency=low
 
   * New upstream snapshot.
    + Fixes example include line in manual page. Closes: #588393
