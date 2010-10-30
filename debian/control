@@ -5,7 +5,7 @@ Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python
-Standards-Version: 3.8.4
+Standards-Version: 3.9.1
 Vcs-Svn: svn://svn.debian.org/pkg-samba/branches/talloc/experimental
 DM-Upload-Allowed: yes
 
