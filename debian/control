@@ -14,7 +14,7 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Section: libs
 Description: hierarchical pool based memory allocator
- A hierarchical pool based memory allocator with destructors. It uses 
+ A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
 
 Package: libtalloc-dev
@@ -22,7 +22,7 @@ Section: libdevel
 Depends: libtalloc2 (=${binary:Version}), ${misc:Depends}
 Architecture: any
 Description: hierarchical pool based memory allocator - development files
- A hierarchical pool based memory allocator with destructors. It uses 
+ A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
  .
  This package contains the development files.
