@@ -336,9 +336,9 @@ def SAMBA_MODULE(bld, modname, source,
                  includes='',
                  subsystem=None,
                  init_function=None,
+                 module_init_name='samba_init_module',
                  autoproto=None,
                  autoproto_extra_source='',
-                 aliases=None,
                  cflags='',
                  internal_module=True,
                  local_include=True,
@@ -367,37 +367,6 @@ def SAMBA_MODULE(bld, modname, source,
         SET_TARGET_TYPE(bld, modname, 'DISABLED')
         return
 
-    if aliases is not None:
-        # if we have aliases, then create a private base library, and a set
-        # of modules on top of that library
-        if init_function:
-            cflags += " -D%s=samba_init_module" % init_function
-
-        basename = modname + '-base'
-        bld.SAMBA_LIBRARY(basename,
-                          source,
-                          deps=deps,
-                          cflags=cflags,
-                          autoproto = autoproto,
-                          local_include=local_include,
-                          vars=vars,
-                          pyembed=pyembed,
-                          private_library=True
-                          )
-
-        aliases = TO_LIST(aliases)
-        aliases.append(modname)
-
-        for alias in aliases:
-            bld.SAMBA_MODULE(alias,
-                             source=[],
-                             internal_module=False,
-                             subsystem=subsystem,
-                             init_function=init_function,
-                             deps=basename)
-        return
-
-
     obj_target = modname + '.objlist'
 
     realname = modname
@@ -415,7 +384,7 @@ def SAMBA_MODULE(bld, modname, source,
     build_link_name = "modules/%s/%s" % (subsystem, realname)
 
     if init_function:
-        cflags += " -D%s=samba_init_module" % init_function
+        cflags += " -D%s=%s" % (init_function, module_init_name)
 
     bld.SAMBA_LIBRARY(modname,
                       source,
@@ -972,3 +941,15 @@ def samba_display(self):
 
 Task.TaskBase.classes['Task'].old_display = Task.TaskBase.classes['Task'].display
 Task.TaskBase.classes['Task'].display = samba_display
+
+
+@after('apply_link')
+@feature('cshlib')
+def apply_bundle_remove_dynamiclib_patch(self):
+    if self.env['MACBUNDLE'] or getattr(self,'mac_bundle',False):
+        if not getattr(self,'vnum',None):
+            try:
+                self.env['LINKFLAGS'].remove('-dynamiclib')
+                self.env['LINKFLAGS'].remove('-single_module')
+            except ValueError:
+                pass
