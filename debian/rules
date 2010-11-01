@@ -24,8 +24,8 @@ build: configure build-stamp
 build-stamp:
 	dh_testdir
 	$(MAKE) all
-ifeq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
-	LD_LIBRARY_PATH=`pwd`/bin/shared ./bin/talloc_testsuite
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	./bin/talloc_testsuite
 endif
 	touch build-stamp
 
@@ -37,6 +37,8 @@ clean:
 	dh_testroot
 	rm -f build-stamp configure-stamp
 	[ ! -f Makefile ] || $(MAKE) distclean
+	rm -f buildtools/wafsamba/*.pyc
+	rm -rf buildtools/bin/.waf*
 	dh_clean
 
 install: build

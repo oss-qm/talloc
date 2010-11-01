@@ -1,4 +1,4 @@
-talloc (2.0.3~git20101030b-1) experimental; urgency=low
+talloc (2.0.3~git20101101-1) UNRELEASED; urgency=low
 
   * New upstream snapshot.
    + Fixes example include line in manual page. Closes: #588393
@@ -6,8 +6,10 @@ talloc (2.0.3~git20101030b-1) experimental; urgency=low
      consistent with other deprecated functionality. Closes: #601205
    + Add new binary packages libpytalloc-util2 and libpytalloc-util-dev.
   * Bump standards version to 3.9.1 (no changes).
+  * Support nocheck in DEB_BUILD_OPTIONS rather than notest (per policy
+    4.9.1).
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sat, 30 Oct 2010 16:04:04 +0200
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 01 Nov 2010 19:06:20 +0100
 
 talloc (2.0.3~git20100517-1) experimental; urgency=low
 

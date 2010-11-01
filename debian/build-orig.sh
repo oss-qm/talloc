@@ -1,7 +1,4 @@
 #!/bin/bash
-GIT_URL=$1
-REFSPEC=$2
-shift 2
 
 if [ -z "$GIT_URL" ]; then
 	GIT_URL=git://git.samba.org/samba.git
