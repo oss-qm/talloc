@@ -4,6 +4,7 @@ talloc (2.0.3~git20101030b-1) experimental; urgency=low
    + Fixes example include line in manual page. Closes: #588393
    + Removes manual page mention of deprecated talloc_append_string,
      consistent with other deprecated functionality. Closes: #601205
+   + Add new binary packages libpytalloc-util2 and libpytalloc-util-dev.
   * Bump standards version to 3.9.1 (no changes).
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 30 Oct 2010 16:04:04 +0200

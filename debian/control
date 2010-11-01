@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
-Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python
+Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python, python-dev, python-support
 Standards-Version: 3.9.1
 Vcs-Svn: svn://svn.debian.org/pkg-samba/branches/talloc/experimental
 DM-Upload-Allowed: yes
@@ -26,3 +26,24 @@ Description: hierarchical pool based memory allocator - development files
  reference counting to determine when memory should be freed.
  .
  This package contains the development files.
+
+Package: libpytalloc-util2
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Architecture: any
+Description: hierarchical pool based memor allocator - python helper library
+ A hierarchical pool based memory allocator with destructors. It uses
+ reference counting to determine when memory should be freed.
+ .
+ This package contains a library with convenience functions for use with Python
+ objects.
+
+Package: libpytalloc-util-dev
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Architecture: any
+Description: hierarchical pool based memor allocator - python helper development files
+ A hierarchical pool based memory allocator with destructors. It uses
+ reference counting to determine when memory should be freed.
+ .
+ This package contains the development files for the Python convenience library.
