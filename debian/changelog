@@ -1,3 +1,9 @@
+talloc (2.0.3~git20101101-2) experimental; urgency=low
+
+  * Add dependency on libpytalloc-util2 to libpytalloc-util-dev.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Thu, 04 Nov 2010 21:56:22 +0100
+
 talloc (2.0.3~git20101101-1) experimental; urgency=low
 
   * New upstream snapshot.

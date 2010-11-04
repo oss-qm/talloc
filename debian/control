@@ -40,7 +40,7 @@ Description: hierarchical pool based memor allocator - python helper library
 
 Package: libpytalloc-util-dev
 Section: libdevel
-Depends: libtalloc-dev (= ${binary:Version}), ${misc:Depends}
+Depends: libpytalloc-util2 (=${binary:Version}), libtalloc-dev (= ${binary:Version}), ${misc:Depends}
 Architecture: any
 Description: hierarchical pool based memor allocator - python helper development files
  A hierarchical pool based memory allocator with destructors. It uses
