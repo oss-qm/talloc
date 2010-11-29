@@ -104,6 +104,17 @@
 static void *null_context;
 static void *autofree_context;
 
+/* used to enable fill of memory on free, which can be useful for
+ * catching use after free errors when valgrind is too slow
+ */
+static struct {
+	bool initialised;
+	bool enabled;
+	uint8_t fill_value;
+} talloc_fill;
+
+#define TALLOC_FILL_ENV "TALLOC_FREE_FILL"
+
 struct talloc_reference_handle {
 	struct talloc_reference_handle *next, *prev;
 	void *ptr;
@@ -567,12 +578,22 @@ static inline int _talloc_free_internal(void *ptr, const char *location)
 		return -1;
 	}
 
+	/* possibly initialised the talloc fill value */
+	if (!talloc_fill.initialised) {
+		const char *fill = getenv(TALLOC_FILL_ENV);
+		if (fill != NULL) {
+			talloc_fill.enabled = true;
+			talloc_fill.fill_value = strtoul(fill, NULL, 0);
+		}
+		talloc_fill.initialised = true;
+	}
+
 	tc = talloc_chunk_from_ptr(ptr);
 
 	if (unlikely(tc->refs)) {
 		int is_child;
-		/* check this is a reference from a child or grantchild
-		 * back to it's parent or grantparent
+		/* check if this is a reference from a child or
+		 * grandchild back to it's parent or grandparent
 		 *
 		 * in that case we need to remove the reference and
 		 * call another instance of talloc_free() on the current
@@ -662,10 +683,19 @@ static inline int _talloc_free_internal(void *ptr, const char *location)
 		*pool_object_count -= 1;
 
 		if (*pool_object_count == 0) {
+			if (talloc_fill.enabled) {
+				memset(TC_PTR_FROM_CHUNK(pool), talloc_fill.fill_value, pool->size);
+			}
 			free(pool);
 		}
 	}
 	else {
+		if (talloc_fill.enabled) {
+			/* don't wipe the header, to allow the
+			   double-free logic to still work
+			*/
+			memset(TC_PTR_FROM_CHUNK(tc), talloc_fill.fill_value, tc->size);
+		}
 		free(tc);
 	}
 	return 0;
@@ -1012,13 +1042,6 @@ _PUBLIC_ void *talloc_init(const char *fmt, ...)
 	va_list ap;
 	void *ptr;
 	const char *name;
-
-	/*
-	 * samba3 expects talloc_report_depth_cb(NULL, ...)
-	 * reports all talloc'ed memory, so we need to enable
-	 * null_tracking
-	 */
-	talloc_enable_null_tracking();
 
 	ptr = __talloc(NULL, 0);
 	if (unlikely(ptr == NULL)) return NULL;

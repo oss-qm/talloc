@@ -5,15 +5,15 @@ import Build, os, Options, Task, Utils, cc, TaskGen, fnmatch, re, shutil, Logs, 
 from Configure import conf
 from Logs import debug
 from samba_utils import SUBST_VARS_RECURSIVE
+TaskGen.task_gen.apply_verif = Utils.nada
 
 # bring in the other samba modules
 from samba_optimisation import *
 from samba_utils import *
+from samba_version import *
 from samba_autoconf import *
 from samba_patterns import *
 from samba_pidl import *
-from samba_errtable import *
-from samba_asn1 import *
 from samba_autoproto import *
 from samba_python import *
 from samba_deps import *
@@ -26,8 +26,9 @@ import irixcc
 import generic_cc
 import samba_dist
 import samba_wildcard
-
-O644 = 420
+import stale_files
+import symbols
+import pkgconfig
 
 # some systems have broken threading in python
 if os.environ.get('WAF_NOTHREADS') == '1':
@@ -38,7 +39,7 @@ LIB_PATH="shared"
 os.putenv('PYTHONUNBUFFERED', '1')
 
 
-if Constants.HEXVERSION < 0x105016:
+if Constants.HEXVERSION < 0x105019:
     Logs.error('''
 Please use the version of waf that comes with Samba, not
 a system installed version. See http://wiki.samba.org/index.php/Waf
@@ -55,11 +56,13 @@ def SAMBA_BUILD_ENV(conf):
     '''create the samba build environment'''
     conf.env.BUILD_DIRECTORY = conf.blddir
     mkdir_p(os.path.join(conf.blddir, LIB_PATH))
+    mkdir_p(os.path.join(conf.blddir, LIB_PATH, "private"))
+    mkdir_p(os.path.join(conf.blddir, "modules"))
     mkdir_p(os.path.join(conf.blddir, 'python/samba/dcerpc'))
     # this allows all of the bin/shared and bin/python targets
     # to be expressed in terms of build directory paths
     mkdir_p(os.path.join(conf.blddir, 'default'))
-    for p in ['python','shared']:
+    for p in ['python','shared', 'modules']:
         link_target = os.path.join(conf.blddir, 'default/' + p)
         if not os.path.lexists(link_target):
             os.symlink('../' + p, link_target)
@@ -97,23 +100,28 @@ def SAMBA_LIBRARY(bld, libname, source,
                   header_path=None,
                   pc_files=None,
                   vnum=None,
+                  soname=None,
                   cflags='',
                   external_library=False,
                   realname=None,
                   autoproto=None,
-                  group='main',
+                  group='libraries',
                   depends_on='',
                   local_include=True,
                   vars=None,
                   install_path=None,
                   install=True,
-                  needs_python=False,
+                  pyembed=False,
+                  pyext=False,
                   target_type='LIBRARY',
                   bundled_extension=True,
                   link_name=None,
                   abi_file=None,
                   abi_match=None,
                   hide_symbols=False,
+                  manpages=None,
+                  private_library=False,
+                  grouping_library=False,
                   enabled=True):
     '''define a Samba library'''
 
@@ -128,10 +136,15 @@ def SAMBA_LIBRARY(bld, libname, source,
         SET_TARGET_TYPE(bld, libname, 'EMPTY')
         return
 
-    if target_type != 'PYTHON' and BUILTIN_LIBRARY(bld, libname):
+    if BUILTIN_LIBRARY(bld, libname):
         obj_target = libname
     else:
         obj_target = libname + '.objlist'
+
+    if group == 'libraries':
+        subsystem_group = 'main'
+    else:
+        subsystem_group = group
 
     # first create a target for building the object files for this library
     # by separating in this way, we avoid recompiling the C files
@@ -144,14 +157,14 @@ def SAMBA_LIBRARY(bld, libname, source,
                         public_headers = public_headers,
                         header_path    = header_path,
                         cflags         = cflags,
-                        group          = group,
+                        group          = subsystem_group,
                         autoproto      = autoproto,
                         depends_on     = depends_on,
-                        needs_python   = needs_python,
                         hide_symbols   = hide_symbols,
+                        pyext          = pyext or (target_type == "PYTHON"),
                         local_include  = local_include)
 
-    if libname == obj_target:
+    if BUILTIN_LIBRARY(bld, libname):
         return
 
     if not SET_TARGET_TYPE(bld, libname, target_type):
@@ -162,15 +175,30 @@ def SAMBA_LIBRARY(bld, libname, source,
     deps = TO_LIST(deps)
     deps.append(obj_target)
 
-    if target_type == 'PYTHON' or realname:
-        bundled_name = libname
+    realname = bld.map_shlib_extension(realname, python=(target_type=='PYTHON'))
+    link_name = bld.map_shlib_extension(link_name, python=(target_type=='PYTHON'))
+
+    # we don't want any public libraries without version numbers
+    if not private_library and vnum is None and soname is None and target_type != 'PYTHON' and not realname:
+        raise Utils.WafError("public library '%s' must have a vnum" % libname)
+
+    if target_type == 'PYTHON' or realname or not private_library:
+        bundled_name = libname.replace('_', '-')
     else:
-        bundled_name = BUNDLED_NAME(bld, libname, bundled_extension)
+        bundled_name = PRIVATE_NAME(bld, libname, bundled_extension, private_library)
+
+    if private_library:
+        if vnum:
+            Logs.error("vnum is invalid for private libraries")
+            sys.exit(1)
+        vnum = Utils.g_module.VERSION
 
     features = 'cc cshlib symlink_lib install_lib'
     if target_type == 'PYTHON':
         features += ' pyext'
-    elif needs_python:
+    if pyext or pyembed:
+        # this is quite strange. we should add pyext feature for pyext
+        # but that breaks the build. This may be a bug in the waf python tool
         features += ' pyembed'
     if abi_file:
         features += ' abi_check'
@@ -183,19 +211,21 @@ def SAMBA_LIBRARY(bld, libname, source,
         features        = features,
         source          = [],
         target          = bundled_name,
-        samba_cflags    = CURRENT_CFLAGS(bld, libname, cflags),
         depends_on      = depends_on,
         samba_deps      = deps,
         samba_includes  = includes,
         local_include   = local_include,
         vnum            = vnum,
+        soname          = soname,
         install_path    = None,
         samba_inst_path = install_path,
-        name	        = libname,
+        name            = libname,
         samba_realname  = realname,
         samba_install   = install,
         abi_file        = abi_file,
-        abi_match       = abi_match
+        abi_match       = abi_match,
+        private_library = private_library,
+        grouping_library=grouping_library
         )
 
     if realname and not link_name:
@@ -206,6 +236,10 @@ def SAMBA_LIBRARY(bld, libname, source,
 
     if pc_files is not None:
         bld.PKG_CONFIG_FILES(pc_files, vnum=vnum)
+
+    if manpages is not None and 'XSLTPROC_MANPAGES' in bld.env and bld.env['XSLTPROC_MANPAGES']:
+        bld.MANPAGES(manpages)
+
 
 Build.BuildContext.SAMBA_LIBRARY = SAMBA_LIBRARY
 
@@ -227,7 +261,7 @@ def SAMBA_BINARY(bld, binname, source,
                  manpages=None,
                  local_include=True,
                  subsystem_name=None,
-                 needs_python=False,
+                 pyembed=False,
                  vars=None,
                  install=True,
                  install_path=None,
@@ -242,13 +276,18 @@ def SAMBA_BINARY(bld, binname, source,
         return
 
     features = 'cc cprogram symlink_bin install_bin'
-    if needs_python:
+    if pyembed:
         features += ' pyembed'
 
     obj_target = binname + '.objlist'
 
     source = bld.EXPAND_VARIABLES(source, vars=vars)
     source = unique_list(TO_LIST(source))
+
+    if group == 'binaries':
+        subsystem_group = 'main'
+    else:
+        subsystem_group = group
 
     # first create a target for building the object files for this binary
     # by separating in this way, we avoid recompiling the C files
@@ -258,12 +297,12 @@ def SAMBA_BINARY(bld, binname, source,
                         deps           = deps,
                         includes       = includes,
                         cflags         = cflags,
-                        group          = group,
+                        group          = subsystem_group,
                         autoproto      = autoproto,
                         subsystem_name = subsystem_name,
-                        needs_python   = needs_python,
                         local_include  = local_include,
                         use_hostcc     = use_hostcc,
+                        pyext          = pyembed,
                         use_global_deps= use_global_deps)
 
     bld.SET_BUILD_GROUP(group)
@@ -276,7 +315,6 @@ def SAMBA_BINARY(bld, binname, source,
         features       = features,
         source         = [],
         target         = binname,
-        samba_cflags   = CURRENT_CFLAGS(bld, binname, cflags),
         samba_deps     = deps,
         samba_includes = includes,
         local_include  = local_include,
@@ -288,11 +326,8 @@ def SAMBA_BINARY(bld, binname, source,
         samba_install  = install
         )
 
-    # setup the subsystem_name as an alias for the real
-    # binary name, so it can be found when expanding
-    # subsystem dependencies
-    if subsystem_name is not None:
-        bld.TARGET_ALIAS(subsystem_name, binname)
+    if manpages is not None and 'XSLTPROC_MANPAGES' in bld.env and bld.env['XSLTPROC_MANPAGES']:
+        bld.MANPAGES(manpages)
 
 Build.BuildContext.SAMBA_BINARY = SAMBA_BINARY
 
@@ -303,64 +338,69 @@ def SAMBA_MODULE(bld, modname, source,
                  includes='',
                  subsystem=None,
                  init_function=None,
+                 module_init_name='samba_init_module',
                  autoproto=None,
                  autoproto_extra_source='',
-                 aliases=None,
                  cflags='',
                  internal_module=True,
                  local_include=True,
                  vars=None,
-                 enabled=True):
+                 enabled=True,
+                 pyembed=True,
+                 ):
     '''define a Samba module.'''
 
-    # we add the init function regardless of whether the module
-    # is enabled or not, as we need to generate a null list if
-    # all disabled
-    bld.ADD_INIT_FUNCTION(subsystem, modname, init_function)
+    source = bld.EXPAND_VARIABLES(source, vars=vars)
 
     if internal_module or BUILTIN_LIBRARY(bld, modname):
-        # treat internal modules as subsystems for now
-        SAMBA_SUBSYSTEM(bld, modname, source,
-                        deps=deps,
-                        includes=includes,
-                        autoproto=autoproto,
-                        autoproto_extra_source=autoproto_extra_source,
-                        cflags=cflags,
-                        local_include=local_include,
-                        enabled=enabled)
+        bld.SAMBA_SUBSYSTEM(modname, source,
+                    deps=deps,
+                    includes=includes,
+                    autoproto=autoproto,
+                    autoproto_extra_source=autoproto_extra_source,
+                    cflags=cflags,
+                    local_include=local_include,
+                    enabled=enabled)
+
+        bld.ADD_INIT_FUNCTION(subsystem, modname, init_function)
         return
 
     if not enabled:
         SET_TARGET_TYPE(bld, modname, 'DISABLED')
         return
 
-    source = bld.EXPAND_VARIABLES(source, vars=vars)
-    source = unique_list(TO_LIST(source))
+    obj_target = modname + '.objlist'
 
-    # remember empty modules, so we can strip the dependencies
-    if ((source == '') or (source == [])) and deps == '' and public_deps == '':
-        SET_TARGET_TYPE(bld, modname, 'EMPTY')
-        return
-
-    if not SET_TARGET_TYPE(bld, modname, 'MODULE'):
-        return
-
+    realname = modname
     if subsystem is not None:
         deps += ' ' + subsystem
+        while realname.startswith("lib"+subsystem+"_"):
+            realname = realname[len("lib"+subsystem+"_"):]
+        while realname.startswith(subsystem+"_"):
+            realname = realname[len(subsystem+"_"):]
 
-    bld.SET_BUILD_GROUP('main')
-    bld(
-        features       = 'cc',
-        source         = source,
-        target         = modname,
-        samba_cflags   = CURRENT_CFLAGS(bld, modname, cflags),
-        samba_includes = includes,
-        local_include  = local_include,
-        samba_deps     = TO_LIST(deps)
-        )
+    realname = bld.make_libname(realname)
+    while realname.startswith("lib"):
+        realname = realname[len("lib"):]
 
-    if autoproto is not None:
-        bld.SAMBA_AUTOPROTO(autoproto, source + TO_LIST(autoproto_extra_source))
+    build_link_name = "modules/%s/%s" % (subsystem, realname)
+
+    if init_function:
+        cflags += " -D%s=%s" % (init_function, module_init_name)
+
+    bld.SAMBA_LIBRARY(modname,
+                      source,
+                      deps=deps,
+                      cflags=cflags,
+                      realname = realname,
+                      autoproto = autoproto,
+                      local_include=local_include,
+                      vars=vars,
+                      link_name=build_link_name,
+                      install_path="${MODULESDIR}/%s" % subsystem,
+                      pyembed=pyembed,
+                      )
+
 
 Build.BuildContext.SAMBA_MODULE = SAMBA_MODULE
 
@@ -376,9 +416,6 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
                     cflags_end=None,
                     group='main',
                     init_function_sentinal=None,
-                    heimdal_autoproto=None,
-                    heimdal_autoproto_options=None,
-                    heimdal_autoproto_private=None,
                     autoproto=None,
                     autoproto_extra_source='',
                     depends_on='',
@@ -390,7 +427,7 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
                     use_global_deps=True,
                     vars=None,
                     hide_symbols=False,
-                    needs_python=False):
+                    pyext=False):
     '''define a Samba subsystem'''
 
     if not enabled:
@@ -413,7 +450,7 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
     bld.SET_BUILD_GROUP(group)
 
     features = 'cc'
-    if needs_python:
+    if pyext:
         features += ' pyext'
 
     t = bld(
@@ -434,10 +471,6 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
     if cflags_end is not None:
         t.samba_cflags.extend(TO_LIST(cflags_end))
 
-    if heimdal_autoproto is not None:
-        bld.HEIMDAL_AUTOPROTO(heimdal_autoproto, source, options=heimdal_autoproto_options)
-    if heimdal_autoproto_private is not None:
-        bld.HEIMDAL_AUTOPROTO_PRIVATE(heimdal_autoproto_private, source)
     if autoproto is not None:
         bld.SAMBA_AUTOPROTO(autoproto, source + TO_LIST(autoproto_extra_source))
     if public_headers is not None:
@@ -452,7 +485,8 @@ def SAMBA_GENERATOR(bld, name, rule, source='', target='',
                     group='generators', enabled=True,
                     public_headers=None,
                     header_path=None,
-                    vars=None):
+                    vars=None,
+                    always=False):
     '''A generic source generator target'''
 
     if not SET_TARGET_TYPE(bld, name, 'GENERATOR'):
@@ -471,6 +505,9 @@ def SAMBA_GENERATOR(bld, name, rule, source='', target='',
         before='cc',
         ext_out='.c',
         name=name)
+
+    if always:
+        t.always = True
 
     if public_headers is not None:
         bld.PUBLIC_HEADERS(public_headers, header_path=header_path)
@@ -495,7 +532,10 @@ def SETUP_BUILD_GROUPS(bld):
     bld.add_group('build_source')
     bld.add_group('prototypes')
     bld.add_group('main')
+    bld.add_group('symbolcheck')
+    bld.add_group('libraries')
     bld.add_group('binaries')
+    bld.add_group('syslibcheck')
     bld.add_group('final')
 Build.BuildContext.SETUP_BUILD_GROUPS = SETUP_BUILD_GROUPS
 
@@ -526,7 +566,7 @@ def ENABLE_TIMESTAMP_DEPENDENCIES(conf):
 
 
 
-t = Task.simple_task_type('copy_script', 'rm -f ${LINK_TARGET} && ln -s ${SRC[0].abspath(env)} ${LINK_TARGET}',
+t = Task.simple_task_type('copy_script', 'rm -f "${LINK_TARGET}" && ln -s "${SRC[0].abspath(env)}" ${LINK_TARGET}',
                           shell=True, color='PINK', ext_in='.bin')
 t.quiet = True
 
@@ -560,7 +600,7 @@ def SAMBA_SCRIPT(bld, name, pattern, installdir, installname=None):
 Build.BuildContext.SAMBA_SCRIPT = SAMBA_SCRIPT
 
 
-def install_file(bld, destdir, file, chmod=O644, flat=False,
+def install_file(bld, destdir, file, chmod=MODE_644, flat=False,
                  python_fixup=False, destname=None, base_name=None):
     '''install a file'''
     destdir = bld.EXPAND_VARIABLES(destdir)
@@ -572,8 +612,14 @@ def install_file(bld, destdir, file, chmod=O644, flat=False,
     if python_fixup:
         # fixup the python path it will use to find Samba modules
         inst_file = file + '.inst'
+        if bld.env["PYTHONDIR"] not in sys.path:
+            regex = "s|\(sys.path.insert.*\)bin/python\(.*\)$|\\1${PYTHONDIR}\\2|g"
+        else:
+            # Eliminate updating sys.path if the target python dir is already
+            # in python path.
+            regex = "s|sys.path.insert.*bin/python.*$||g"
         bld.SAMBA_GENERATOR('python_%s' % destname,
-                            rule="sed 's|\(sys.path.insert.*\)bin/python\(.*\)$|\\1${PYTHONDIR}\\2|g' < ${SRC} > ${TGT}",
+                            rule="sed '%s' < ${SRC} > ${TGT}" % regex,
                             source=file,
                             target=inst_file)
         file = inst_file
@@ -582,7 +628,7 @@ def install_file(bld, destdir, file, chmod=O644, flat=False,
     bld.install_as(dest, file, chmod=chmod)
 
 
-def INSTALL_FILES(bld, destdir, files, chmod=O644, flat=False,
+def INSTALL_FILES(bld, destdir, files, chmod=MODE_644, flat=False,
                   python_fixup=False, destname=None, base_name=None):
     '''install a set of files'''
     for f in TO_LIST(files):
@@ -592,7 +638,7 @@ def INSTALL_FILES(bld, destdir, files, chmod=O644, flat=False,
 Build.BuildContext.INSTALL_FILES = INSTALL_FILES
 
 
-def INSTALL_WILDCARD(bld, destdir, pattern, chmod=O644, flat=False,
+def INSTALL_WILDCARD(bld, destdir, pattern, chmod=MODE_644, flat=False,
                      python_fixup=False, exclude=None, trim_path=None):
     '''install a set of files matching a wildcard pattern'''
     files=TO_LIST(bld.path.ant_glob(pattern))
@@ -622,23 +668,60 @@ Build.BuildContext.INSTALL_DIRS = INSTALL_DIRS
 
 re_header = re.compile('#include[ \t]*"([^"]+)"', re.I | re.M)
 class header_task(Task.Task):
+    """
+    The public headers (the one installed on the system) have both
+    different paths and contents, so the rename is not enough.
+
+    Intermediate .inst.h files are created because path manipulation
+    may be slow. The substitution is thus performed only once.
+    """
+
     name = 'header'
     color = 'PINK'
     vars = ['INCLUDEDIR', 'HEADER_DEPS']
+
     def run(self):
         txt = self.inputs[0].read(self.env)
 
+        # hard-coded string, but only present in samba4 (I promise, you won't feel a thing)
         txt = txt.replace('#if _SAMBA_BUILD_ == 4', '#if 1\n')
 
-        themap = self.generator.bld.subst_table
+        # use a regexp to substitute the #include lines in the files
+        map = self.generator.bld.hnodemap
+        dirnodes = self.generator.bld.hnodedirs
         def repl(m):
             if m.group(1):
                 s = m.group(1)
-                return "#include <%s>" % themap.get(s, s)
+
+                # pokemon headers: gotta catch'em all!
+                fin = s
+                if s.startswith('bin/default'):
+                    node = self.generator.bld.srcnode.find_resource(s.replace('bin/default/', ''))
+                    if not node:
+                        Logs.warn('could not find the public header for %r' % s)
+                    elif node.id in map:
+                        fin = map[node.id]
+                    else:
+                        Logs.warn('could not find the public header replacement for build header %r' % s)
+                else:
+                    # this part is more difficult since the path may be relative to anything
+                    for dirnode in dirnodes:
+                        node = dirnode.find_resource(s)
+                        if node:
+                             if node.id in map:
+                                 fin = map[node.id]
+                                 break
+                             else:
+                                 Logs.warn('could not find the public header replacement for source header %r %r' % (s, node))
+                    else:
+                        Logs.warn('-> could not find the public header for %r' % s)
+
+                return "#include <%s>" % fin
             return ''
 
         txt = re_header.sub(repl, txt)
 
+        # and write the output file
         f = None
         try:
             f = open(self.outputs[0].abspath(self.env), 'w')
@@ -647,32 +730,30 @@ class header_task(Task.Task):
             if f:
                 f.close()
 
-def init_subst(bld):
-    """
-    initialize the header substitution table
-    for now use the file headermap.txt but in the future we will compute the paths properly
-    """
-
-    if getattr(bld, 'subst_table', None):
-        return bld.subst_table_h
-
-    node = bld.srcnode.find_resource("source4/headermap.txt")
-    if not node:
-        return {}
-    lines = node.read(None)
-    bld.subst_table_h = hash(lines)
-    lines = [x.strip().split(': ') for x in lines.split('\n') if x.rfind(': ') > -1]
-    bld.subst_table = dict(lines)
-    return bld.subst_table_h
-
 @TaskGen.feature('pubh')
 def make_public_headers(self):
+    """
+    collect the public headers to process and to install, then
+    create the substitutions (name and contents)
+    """
+
     if not self.bld.is_install:
         # install time only (lazy)
         return
 
-    self.env['HEADER_DEPS'] = init_subst(self.bld)
-    # adds a dependency and trigger a rebuild if the dict changes
+    # keep two variables
+    #    hnodedirs: list of folders for searching the headers
+    #    hnodemap: node ids and replacement string (node objects are unique)
+    try:
+        self.bld.hnodedirs.append(self.path)
+    except AttributeError:
+        self.bld.hnodemap = {}
+        self.bld.hnodedirs = [self.bld.srcnode, self.path]
+
+        for k in 'source4 source4/include lib/talloc lib/tevent/ source4/lib/ldb/include/'.split():
+            node = self.bld.srcnode.find_dir(k)
+            if node:
+                self.bld.hnodedirs.append(node)
 
     header_path = getattr(self, 'header_path', None) or ''
 
@@ -702,6 +783,7 @@ def make_public_headers(self):
             dest = s[1]
 
         inn = self.path.find_resource(name)
+
         if not inn:
             raise ValueError("could not find the public header %r in %r" % (name, self.path))
         out = inn.change_ext('.inst.h')
@@ -714,8 +796,17 @@ def make_public_headers(self):
             inst_path = inst_path + '/'
         inst_path = inst_path + dest
 
-        #print("going to install the headers", inst_path, out)
         self.bld.install_as('${INCLUDEDIR}/%s' % inst_path, out, self.env)
+
+        self.bld.hnodemap[inn.id] = inst_path
+
+    # create a hash (not md5) to make sure the headers are re-created if something changes
+    val = 0
+    lst = list(self.bld.hnodemap.keys())
+    lst.sort()
+    for k in lst:
+        val = hash((val, k, self.bld.hnodemap[k]))
+    self.bld.env.HEADER_DEPS = val
 
 def PUBLIC_HEADERS(bld, public_headers, header_path=None):
     '''install some headers
@@ -730,62 +821,19 @@ def PUBLIC_HEADERS(bld, public_headers, header_path=None):
 Build.BuildContext.PUBLIC_HEADERS = PUBLIC_HEADERS
 
 
-def subst_at_vars(task):
-    '''substiture @VAR@ style variables in a file'''
-    src = task.inputs[0].srcpath(task.env)
-    tgt = task.outputs[0].bldpath(task.env)
-
-    f = open(src, 'r')
-    s = f.read()
-    f.close()
-    # split on the vars
-    a = re.split('(@\w+@)', s)
-    out = []
-    done_var = {}
-    back_sub = [ ('PREFIX', '${prefix}'), ('EXEC_PREFIX', '${exec_prefix}')]
-    for v in a:
-        if re.match('@\w+@', v):
-            vname = v[1:-1]
-            if not vname in task.env and vname.upper() in task.env:
-                vname = vname.upper()
-            if not vname in task.env:
-                Logs.error("Unknown substitution %s in %s" % (v, task.name))
-                sys.exit(1)
-            v = SUBST_VARS_RECURSIVE(task.env[vname], task.env)
-            # now we back substitute the allowed pc vars
-            for (b, m) in back_sub:
-                s = task.env[b]
-                if s == v[0:len(s)]:
-                    if not b in done_var:
-                        # we don't want to substitute the first usage
-                        done_var[b] = True
-                    else:
-                        v = m + v[len(s):]
-                    break
-        out.append(v)
-    contents = ''.join(out)
-    f = open(tgt, 'w')
-    s = f.write(contents)
-    f.close()
-    return 0
-
-
-
-def PKG_CONFIG_FILES(bld, pc_files, vnum=None):
-    '''install some pkg_config pc files'''
-    dest = '${PKGCONFIGDIR}'
-    dest = bld.EXPAND_VARIABLES(dest)
-    for f in TO_LIST(pc_files):
-        base=os.path.basename(f)
-        t = bld.SAMBA_GENERATOR('PKGCONFIG_%s' % base,
-                                rule=subst_at_vars,
-                                source=f+'.in',
-                                target=f)
-        if vnum:
-            t.env.PACKAGE_VERSION = vnum
-        INSTALL_FILES(bld, dest, f, flat=True, destname=base)
-Build.BuildContext.PKG_CONFIG_FILES = PKG_CONFIG_FILES
-
+def MANPAGES(bld, manpages):
+    '''build and install manual pages'''
+    bld.env.MAN_XSL = 'http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl'
+    for m in manpages.split():
+        source = m + '.xml'
+        bld.SAMBA_GENERATOR(m,
+                            source=source,
+                            target=m,
+                            group='final',
+                            rule='${XSLTPROC} -o ${TGT} --nonet ${MAN_XSL} ${SRC}'
+                            )
+        bld.INSTALL_FILES('${MANDIR}/man%s' % m[-1], m, flat=True)
+Build.BuildContext.MANPAGES = MANPAGES
 
 
 #############################################################
@@ -818,6 +866,9 @@ def samba_display(self):
         if target_type in type_map:
             return progress_display(self, type_map[target_type], self.name)
 
+    if len(self.inputs) == 0:
+        return Task.Task.old_display(self)
+
     fname = self.inputs[0].bldpath(self.env)
     if fname[0:3] == '../':
         fname = fname[3:]
@@ -836,3 +887,15 @@ def samba_display(self):
 
 Task.TaskBase.classes['Task'].old_display = Task.TaskBase.classes['Task'].display
 Task.TaskBase.classes['Task'].display = samba_display
+
+
+@after('apply_link')
+@feature('cshlib')
+def apply_bundle_remove_dynamiclib_patch(self):
+    if self.env['MACBUNDLE'] or getattr(self,'mac_bundle',False):
+        if not getattr(self,'vnum',None):
+            try:
+                self.env['LINKFLAGS'].remove('-dynamiclib')
+                self.env['LINKFLAGS'].remove('-single_module')
+            except ValueError:
+                pass
