@@ -40,7 +40,7 @@ Description: hierarchical pool based memory allocator - Python bindings
 Package: python-talloc-dev
 Architecture: all
 Section: libdevel
-Depends: python-talloc (= ${binary:Version}), ${misc:Depends}, pkg-config
+Depends: python-talloc (>= ${source:Version}), ${misc:Depends}, pkg-config
 Description: talloc Python bindings - development files
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.

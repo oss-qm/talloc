@@ -1,9 +1,9 @@
-talloc (2.0.3~git20101129-1) UNRELEASED; urgency=low
+talloc (2.0.3~git20101130-1) experimental; urgency=low
 
   * New upstream release.
   * Bump standards version to 3.9.1 (no changes).
 
- -- Jelmer Vernooij <jelmer@debian.org>  Mon, 29 Nov 2010 23:52:25 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 30 Nov 2010 01:15:51 +0100
 
 talloc (2.0.3~git20100517-1) experimental; urgency=low
 
