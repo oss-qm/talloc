@@ -1,6 +1,6 @@
 # simple makefile wrapper to run waf
 
-WAF=WAF_MAKE=1 BUILDTOOLS/bin/waf
+WAF=WAF_MAKE=1 PATH=buildtools/bin:../../buildtools/bin:$$PATH waf
 
 all:
 	$(WAF) build
@@ -59,9 +59,3 @@ ctags:
 bin/%:: FORCE
 	$(WAF) --targets=`basename $@`
 FORCE:
-
-configure: autogen-waf.sh BUILDTOOLS/scripts/configure.waf
-	./autogen-waf.sh
-
-Makefile: autogen-waf.sh configure BUILDTOOLS/scripts/Makefile.waf
-	./autogen-waf.sh

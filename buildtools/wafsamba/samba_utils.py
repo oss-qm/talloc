@@ -11,14 +11,16 @@ import shlex
 LIB_PATH="shared"
 
 
+# sigh, python octal constants are a mess
+MODE_644 = int('644', 8)
+MODE_755 = int('755', 8)
+
 @conf
 def SET_TARGET_TYPE(ctx, target, value):
     '''set the target type of a target'''
     cache = LOCAL_CACHE(ctx, 'TARGET_TYPE')
     if target in cache and cache[target] != 'EMPTY':
-        Logs.error("ERROR: Target '%s' in directory %s re-defined as %s - was %s" % (target,
-                                                                                     ctx.curdir,
-                                                                                     value, cache[target]))
+        Logs.error("ERROR: Target '%s' in directory %s re-defined as %s - was %s" % (target, ctx.curdir, value, cache[target]))
         sys.exit(1)
     LOCAL_CACHE_SET(ctx, 'TARGET_TYPE', target, value)
     debug("task_gen: Target '%s' created of type '%s' in %s" % (target, value, ctx.curdir))
@@ -64,18 +66,22 @@ def ADD_LD_LIBRARY_PATH(path):
 def install_rpath(bld):
     '''the rpath value for installation'''
     bld.env['RPATH'] = []
+    ret = set()
     if bld.env.RPATH_ON_INSTALL:
-        return ['%s/lib' % bld.env.PREFIX]
-    return []
+        ret.add(bld.EXPAND_VARIABLES(bld.env.LIBDIR))
+    if bld.env.RPATH_ON_INSTALL_PRIVATE:
+        ret.add(bld.EXPAND_VARIABLES(bld.env.PRIVATELIBDIR))
+    return list(ret)
 
 
 def build_rpath(bld):
     '''the rpath value for build'''
-    rpath = os.path.normpath('%s/%s' % (bld.env.BUILD_DIRECTORY, LIB_PATH))
+    rpaths = [os.path.normpath('%s/%s' % (bld.env.BUILD_DIRECTORY, d)) for d in ("shared", "shared/private")]
     bld.env['RPATH'] = []
     if bld.env.RPATH_ON_BUILD:
-        return [rpath]
-    ADD_LD_LIBRARY_PATH(rpath)
+        return rpaths
+    for rpath in rpaths:
+        ADD_LD_LIBRARY_PATH(rpath)
     return []
 
 
@@ -100,8 +106,7 @@ def LOCAL_CACHE_SET(ctx, cachename, key, value):
 def ASSERT(ctx, expression, msg):
     '''a build assert call'''
     if not expression:
-        Logs.error("ERROR: %s\n" % msg)
-        raise AssertionError
+        raise Utils.WafError("ERROR: %s\n" % msg)
 Build.BuildContext.ASSERT = ASSERT
 
 
@@ -194,13 +199,13 @@ def unique_list(seq):
     return result
 
 
-def TO_LIST(str):
+def TO_LIST(str, delimiter=None):
     '''Split a list, preserving quoted strings and existing lists'''
     if str is None:
         return []
     if isinstance(str, list):
         return str
-    lst = str.split()
+    lst = str.split(delimiter)
     # the string may have had quotes in it, now we
     # check if we did have quotes, and use the slower shlex
     # if we need to
@@ -397,8 +402,11 @@ def LOAD_ENVIRONMENT():
        from new commands'''
     import Environment
     env = Environment.Environment()
-    env.load('.lock-wscript')
-    env.load(env.blddir + '/c4che/default.cache.py')
+    try:
+        env.load('.lock-wscript')
+        env.load(env.blddir + '/c4che/default.cache.py')
+    except:
+        pass
     return env
 
 
@@ -448,7 +456,9 @@ def CHECK_MAKEFLAGS(bld):
         return
     makeflags = os.environ.get('MAKEFLAGS')
     jobs_set = False
-    for opt in makeflags.split():
+    # we need to use shlex.split to cope with the escaping of spaces
+    # in makeflags
+    for opt in shlex.split(makeflags):
         # options can come either as -x or as x
         if opt[0:2] == 'V=':
             Options.options.verbose = Logs.verbose = int(opt[2:])
@@ -520,3 +530,64 @@ def reconfigure(ctx):
     bld = samba_wildcard.fake_build_environment()
     Configure.autoconfig = True
     Scripting.check_configured(bld)
+
+
+def map_shlib_extension(ctx, name, python=False):
+    '''map a filename with a shared library extension of .so to the real shlib name'''
+    if name is None:
+        return None
+    if name[-1:].isdigit():
+        # some libraries have specified versions in the wscript rule
+        return name
+    (root1, ext1) = os.path.splitext(name)
+    if python:
+        (root2, ext2) = os.path.splitext(ctx.env.pyext_PATTERN)
+    else:
+        (root2, ext2) = os.path.splitext(ctx.env.shlib_PATTERN)
+    return root1+ext2
+Build.BuildContext.map_shlib_extension = map_shlib_extension
+
+
+def make_libname(ctx, name, nolibprefix=False, version=None, python=False):
+    """make a library filename
+         Options:
+              nolibprefix: don't include the lib prefix
+              version    : add a version number
+              python     : if we should use python module name conventions"""
+
+    if python:
+        libname = ctx.env.pyext_PATTERN % name
+    else:
+        libname = ctx.env.shlib_PATTERN % name
+    if nolibprefix and libname[0:3] == 'lib':
+        libname = libname[3:]
+    if version:
+        if version[0] == '.':
+            version = version[1:]
+        (root, ext) = os.path.splitext(libname)
+        if ext == ".dylib":
+            # special case - version goes before the prefix
+            libname = "%s.%s%s" % (root, version, ext)
+        else:
+            libname = "%s%s.%s" % (root, ext, version)
+    return libname
+Build.BuildContext.make_libname = make_libname
+
+
+def get_tgt_list(bld):
+    '''return a list of build objects for samba'''
+
+    targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
+
+    # build a list of task generators we are interested in
+    tgt_list = []
+    for tgt in targets:
+        type = targets[tgt]
+        if not type in ['SUBSYSTEM', 'MODULE', 'BINARY', 'LIBRARY', 'ASN1', 'PYTHON']:
+            continue
+        t = bld.name_to_obj(tgt, bld.env)
+        if t is None:
+            Logs.error("Target %s of type %s has no task generator" % (tgt, type))
+            sys.exit(1)
+        tgt_list.append(t)
+    return tgt_list

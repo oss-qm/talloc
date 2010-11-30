@@ -84,6 +84,7 @@ def CHECK_HEADER(conf, h, add_headers=False, lib=None):
         return False
     d = h.upper().replace('/', '_')
     d = d.replace('.', '_')
+    d = d.replace('-', '_')
     d = 'HAVE_%s' % d
     if CONFIG_SET(conf, d):
         if add_headers:
@@ -355,8 +356,10 @@ def CHECK_CODE(conf, code, define,
     if msg is None:
         msg="Checking for %s" % define
 
+    cflags = TO_LIST(cflags)
+
     if local_include:
-        cflags += ' -I%s' % conf.curdir
+        cflags.append('-I%s' % conf.curdir)
 
     if not link:
         type='nolink'
@@ -367,7 +370,6 @@ def CHECK_CODE(conf, code, define,
 
     (ccflags, ldflags) = library_flags(conf, uselib)
 
-    cflags = TO_LIST(cflags)
     cflags.extend(ccflags)
 
     if on_target:
@@ -435,6 +437,15 @@ def CHECK_CFLAGS(conf, cflags):
                       ccflags=cflags,
                       msg="Checking compiler accepts %s" % cflags)
 
+@conf
+def CHECK_LDFLAGS(conf, ldflags):
+    '''check if the given ldflags are accepted by the linker
+    '''
+    return conf.check(fragment='int main(void) { return 0; }\n',
+                      execute=0,
+                      ldflags=ldflags,
+                      msg="Checking linker accepts %s" % ldflags)
+
 
 @conf
 def CONFIG_SET(conf, option):
@@ -448,40 +459,62 @@ def library_flags(conf, libs):
     ccflags = []
     ldflags = []
     for lib in TO_LIST(libs):
-        inc_path = None
         inc_path = getattr(conf.env, 'CPPPATH_%s' % lib.upper(), [])
         lib_path = getattr(conf.env, 'LIBPATH_%s' % lib.upper(), [])
-        for i in inc_path:
-            ccflags.append('-I%s' % i)
-        for l in lib_path:
-            ldflags.append('-L%s' % l)
+        ccflags.extend(['-I%s' % i for i in inc_path])
+        ldflags.extend(['-L%s' % l for l in lib_path])
+        extra_ccflags = TO_LIST(getattr(conf.env, 'CCFLAGS_%s' % lib.upper(), []))
+        extra_ldflags = TO_LIST(getattr(conf.env, 'LDFLAGS_%s' % lib.upper(), []))
+        ccflags.extend(extra_ccflags)
+        ldflags.extend(extra_ldflags)
+    if 'EXTRA_LDFLAGS' in conf.env:
+        ldflags.extend(conf.env['EXTRA_LDFLAGS'])
+    ccflags = unique_list(ccflags)
+    ldflags = unique_list(ldflags)
     return (ccflags, ldflags)
 
 
 @conf
-def CHECK_LIB(conf, libs, mandatory=False, empty_decl=True):
-    '''check if a set of libraries exist'''
+def CHECK_LIB(conf, libs, mandatory=False, empty_decl=True, set_target=True, shlib=False):
+    '''check if a set of libraries exist as system libraries
 
+    returns the sublist of libs that do exist as a syslib or []
+    '''
+
+    fragment= '''
+int foo()
+{
+    int v = 2;
+    return v*2;
+}
+'''
+    ret = []
     liblist  = TO_LIST(libs)
-    ret = True
     for lib in liblist[:]:
         if GET_TARGET_TYPE(conf, lib) == 'SYSLIB':
+            ret.append(lib)
             continue
 
         (ccflags, ldflags) = library_flags(conf, lib)
+        if shlib:
+            res = conf.check(features='cc cshlib', fragment=fragment, lib=lib, uselib_store=lib, ccflags=ccflags, ldflags=ldflags)
+        else:
+            res = conf.check(lib=lib, uselib_store=lib, ccflags=ccflags, ldflags=ldflags)
 
-        if not conf.check(lib=lib, uselib_store=lib, ccflags=ccflags, ldflags=ldflags):
+        if not res:
             if mandatory:
                 Logs.error("Mandatory library '%s' not found for functions '%s'" % (lib, list))
                 sys.exit(1)
             if empty_decl:
                 # if it isn't a mandatory library, then remove it from dependency lists
-                SET_TARGET_TYPE(conf, lib, 'EMPTY')
-            ret = False
+                if set_target:
+                    SET_TARGET_TYPE(conf, lib, 'EMPTY')
         else:
             conf.define('HAVE_LIB%s' % lib.upper().replace('-','_'), 1)
             conf.env['LIB_' + lib.upper()] = lib
-            LOCAL_CACHE_SET(conf, 'TARGET_TYPE', lib, 'SYSLIB')
+            if set_target:
+                conf.SET_TARGET_TYPE(lib, 'SYSLIB')
+            ret.append(lib)
 
     return ret
 
@@ -489,7 +522,7 @@ def CHECK_LIB(conf, libs, mandatory=False, empty_decl=True):
 
 @conf
 def CHECK_FUNCS_IN(conf, list, library, mandatory=False, checklibc=False,
-                   headers=None, link=True, empty_decl=True):
+                   headers=None, link=True, empty_decl=True, set_target=True):
     """
     check that the functions in 'list' are available in 'library'
     if they are, then make that library available as a dependency
@@ -523,19 +556,15 @@ def CHECK_FUNCS_IN(conf, list, library, mandatory=False, checklibc=False,
                 SET_TARGET_TYPE(conf, lib, 'EMPTY')
         return True
 
-    conf.CHECK_LIB(liblist, empty_decl=empty_decl)
+    checklist = conf.CHECK_LIB(liblist, empty_decl=empty_decl, set_target=set_target)
     for lib in liblist[:]:
-        if not GET_TARGET_TYPE(conf, lib) == 'SYSLIB':
-            if mandatory:
-                Logs.error("Mandatory library '%s' not found for functions '%s'" % (lib, list))
-                sys.exit(1)
-            # if it isn't a mandatory library, then remove it from dependency lists
-            liblist.remove(lib)
-            continue
+        if not lib in checklist and mandatory:
+            Logs.error("Mandatory library '%s' not found for functions '%s'" % (lib, list))
+            sys.exit(1)
 
     ret = True
     for f in remaining:
-        if not CHECK_FUNC(conf, f, lib=' '.join(liblist), headers=headers, link=link):
+        if not CHECK_FUNC(conf, f, lib=' '.join(checklist), headers=headers, link=link):
             ret = False
 
     return ret
@@ -560,6 +589,7 @@ def SAMBA_CONFIG_H(conf, path=None):
         # we add these here to ensure that -Wstrict-prototypes is not set during configure
         conf.ADD_CFLAGS('-Wall -g -Wshadow -Wstrict-prototypes -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Werror-implicit-function-declaration -Wformat=2 -Wno-format-y2k',
                         testflags=True)
+        conf.env.DEVELOPER_MODE = True
 
     if Options.options.picky_developer:
         conf.ADD_CFLAGS('-Werror', testflags=True)
@@ -600,6 +630,21 @@ def ADD_CFLAGS(conf, flags, testflags=False):
     if not 'EXTRA_CFLAGS' in conf.env:
         conf.env['EXTRA_CFLAGS'] = []
     conf.env['EXTRA_CFLAGS'].extend(TO_LIST(flags))
+
+@conf
+def ADD_LDFLAGS(conf, flags, testflags=False):
+    '''add some LDFLAGS to the command line
+       optionally set testflags to ensure all the flags work
+    '''
+    if testflags:
+        ok_flags=[]
+        for f in flags.split():
+            if CHECK_LDFLAGS(conf, f):
+                ok_flags.append(f)
+        flags = ok_flags
+    if not 'EXTRA_LDFLAGS' in conf.env:
+        conf.env['EXTRA_LDFLAGS'] = []
+    conf.env['EXTRA_LDFLAGS'].extend(TO_LIST(flags))
 
 
 

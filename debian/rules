@@ -37,6 +37,8 @@ clean:
 	dh_testroot
 	rm -f build-stamp configure-stamp
 	[ ! -f Makefile ] || $(MAKE) distclean
+	rm -fr buildtools/bin/.waf*
+	rm -f buildtools/wafsamba/*.pyc
 	dh_clean
 
 install: build
@@ -47,7 +49,7 @@ install: build
 	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
-	ar -rc libtalloc.a bin/default/talloc_1.o
+	ar -rc libtalloc.a bin/default/talloc_?.o
 	cp libtalloc.a $(DESTDIR)/usr/lib
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 

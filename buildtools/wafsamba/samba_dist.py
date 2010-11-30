@@ -1,10 +1,11 @@
 # customised version of 'waf dist' for Samba tools
 # uses git ls-files to get file lists
 
-import Utils, os, sys, tarfile, stat, Scripting, Logs
+import Utils, os, sys, tarfile, gzip, stat, Scripting, Logs, Options
 from samba_utils import *
 
 dist_dirs = None
+dist_blacklist = ""
 
 def add_symlink(tar, fname, abspath, basedir):
     '''handle symlinks to directories that may move during packaging'''
@@ -70,6 +71,31 @@ def add_tarfile(tar, fname, abspath, basedir):
     fh.close()
 
 
+def vcs_dir_contents(path):
+    """Return the versioned files under a path.
+
+    :return: List of paths relative to path
+    """
+    repo = path
+    while repo != "/":
+        if os.path.isdir(os.path.join(repo, ".git")):
+            ls_files_cmd = [ 'git', 'ls-files', '--full-name', os.path.relpath(path, repo) ]
+            cwd = None
+            env = dict(os.environ)
+            env["GIT_DIR"] = os.path.join(repo, ".git")
+            break
+        elif os.path.isdir(os.path.join(repo, ".bzr")):
+            ls_files_cmd = [ 'bzr', 'ls', '--recursive', os.path.relpath(path, repo)]
+            cwd = repo
+            env = None
+            break
+        repo = os.path.dirname(repo)
+    if repo == "/":
+        raise Exception("unsupported or no vcs for %s" % path)
+    print ls_files_cmd
+    return Utils.cmd_output(ls_files_cmd, cwd=cwd, env=env).split()
+
+
 def dist(appname='',version=''):
     if not isinstance(appname, str) or not appname:
         # this copes with a mismatch in the calling arguments for dist()
@@ -85,9 +111,15 @@ def dist(appname='',version=''):
         sys.exit(1)
 
     dist_base = '%s-%s' % (appname, version)
-    dist_name = '%s.tar.gz' % (dist_base)
 
-    tar = tarfile.open(dist_name, 'w:gz')
+    if Options.options.SIGN_RELEASE:
+        dist_name = '%s.tar' % (dist_base)
+        tar = tarfile.open(dist_name, 'w')
+    else:
+        dist_name = '%s.tar.gz' % (dist_base)
+        tar = tarfile.open(dist_name, 'w:gz')
+
+    blacklist = dist_blacklist.split()
 
     for dir in dist_dirs.split():
         if dir.find(':') != -1:
@@ -96,16 +128,29 @@ def dist(appname='',version=''):
         else:
             destdir = '.'
         absdir = os.path.join(srcdir, dir)
-        git_cmd = [ 'git', 'ls-files', '--full-name', absdir ]
         try:
-            files = Utils.cmd_output(git_cmd).split()
-        except:
-            Logs.error('git command failed: %s' % ' '.join(git_cmd))
+            files = vcs_dir_contents(absdir)
+        except Exception, e:
+            Logs.error('unable to get contents of %s: %s' % (absdir, e))
             sys.exit(1)
         for f in files:
             abspath = os.path.join(srcdir, f)
+
             if dir != '.':
                 f = f[len(dir)+1:]
+
+            # Remove files in the blacklist
+            if f in dist_blacklist:
+                continue
+            blacklisted = False
+            # Remove directories in the blacklist
+            for d in blacklist:
+                if f.startswith(d):
+                    blacklisted = True
+            if blacklisted:
+                continue
+            if os.path.isdir(abspath):
+                continue
             if destdir != '.':
                 f = destdir + '/' + f
             fname = dist_base + '/' + f
@@ -113,7 +158,30 @@ def dist(appname='',version=''):
 
     tar.close()
 
-    Logs.info('Created %s' % dist_name)
+    if Options.options.SIGN_RELEASE:
+        try:
+            os.unlink(dist_name + '.asc')
+        except OSError:
+            pass
+
+        cmd = "gpg --detach-sign --armor " + dist_name
+        os.system(cmd)
+        uncompressed_tar = open(dist_name, 'rb')
+        compressed_tar = gzip.open(dist_name + '.gz', 'wb')
+        while 1:
+            buffer = uncompressed_tar.read(1048576)
+            if buffer:
+                compressed_tar.write(buffer)
+            else:
+                break
+        uncompressed_tar.close()
+        compressed_tar.close()
+        os.unlink(dist_name)
+        Logs.info('Created %s.gz %s.asc' % (dist_name, dist_name))
+        dist_name = dist_name + '.gz'
+    else:
+        Logs.info('Created %s' % dist_name)
+
     return dist_name
 
 
@@ -123,5 +191,12 @@ def DIST_DIRS(dirs):
     global dist_dirs
     if not dist_dirs:
         dist_dirs = dirs
+
+@conf
+def DIST_BLACKLIST(blacklist):
+    '''set the files to exclude from packaging, relative to top srcdir'''
+    global dist_blacklist
+    if not dist_blacklist:
+        dist_blacklist = blacklist
 
 Scripting.dist = dist
