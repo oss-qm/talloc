@@ -6,7 +6,7 @@ Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python, python-dev, python-support
 Standards-Version: 3.9.1
-Vcs-Svn: svn://svn.debian.org/pkg-samba/branches/talloc/experimental
+Vcs-Bzr: http://bzr.debian.org/pkg-samba/talloc/experimental
 DM-Upload-Allowed: yes
 
 Package: libtalloc2
