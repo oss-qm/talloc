@@ -23,15 +23,24 @@
 #include "pytalloc.h"
 #include <assert.h>
 
-/**
- * Simple dealloc for talloc-wrapping PyObjects
- */
-void py_talloc_dealloc(PyObject* self)
+PyTypeObject *PyTalloc_GetObjectType(void)
 {
-	py_talloc_Object *obj = (py_talloc_Object *)self;
-	assert(talloc_unlink(NULL, obj->talloc_ctx) != -1);
-	obj->talloc_ctx = NULL;
-	self->ob_type->tp_free(self);
+	static PyTypeObject *type = NULL;
+	PyObject *mod;
+
+	if (type != NULL) {
+		return type;
+	}
+
+	mod = PyImport_ImportModule("talloc");
+	if (mod == NULL) {
+		return NULL;
+	}
+
+	type = (PyTypeObject *)PyObject_GetAttrString(mod, "Object");
+	Py_DECREF(mod);
+
+	return type;
 }
 
 /**
@@ -88,31 +97,6 @@ PyObject *py_talloc_reference_ex(PyTypeObject *py_type, TALLOC_CTX *mem_ctx, voi
 	return (PyObject *)ret;
 }
 
-/**
- * Default (but only slightly more useful than the default) implementation of Repr().
- */
-PyObject *py_talloc_default_repr(PyObject *obj)
-{
-	py_talloc_Object *talloc_obj = (py_talloc_Object *)obj;
-	PyTypeObject *type = (PyTypeObject*)PyObject_Type(obj);
-
-	return PyString_FromFormat("<%s talloc object at 0x%p>", 
-				   type->tp_name, talloc_obj->ptr);
-}
-
-/**
- * Default (but only slightly more useful than the default) implementation of cmp.
- */
-int py_talloc_default_cmp(PyObject *_obj1, PyObject *_obj2)
-{
-	py_talloc_Object *obj1 = (py_talloc_Object *)_obj1,
-					 *obj2 = (py_talloc_Object *)_obj2;
-	if (obj1->ob_type != obj2->ob_type)
-		return (obj1->ob_type - obj2->ob_type);
-
-	return ((char *)py_talloc_get_ptr(obj1) - (char *)py_talloc_get_ptr(obj2));
-}
-
 static void py_cobject_talloc_free(void *ptr)
 {
 	talloc_free(ptr);
@@ -132,4 +116,11 @@ PyObject *PyString_FromString_check_null(const char *ptr)
 		Py_RETURN_NONE;
 	}
 	return PyString_FromString(ptr);
+}
+
+int PyTalloc_Check(PyObject *obj)
+{
+	PyTypeObject *tp = PyTalloc_GetObjectType();
+
+	return PyObject_TypeCheck(obj, tp);
 }

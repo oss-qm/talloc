@@ -74,11 +74,64 @@ static PyMethodDef talloc_methods[] = {
 	{ NULL }
 };
 
+/**
+ * Default (but only slightly more useful than the default) implementation of Repr().
+ */
+static PyObject *py_talloc_default_repr(PyObject *obj)
+{
+	py_talloc_Object *talloc_obj = (py_talloc_Object *)obj;
+	PyTypeObject *type = (PyTypeObject*)PyObject_Type(obj);
+
+	return PyString_FromFormat("<%s talloc object at 0x%p>", 
+				   type->tp_name, talloc_obj->ptr);
+}
+
+/**
+ * Simple dealloc for talloc-wrapping PyObjects
+ */
+static void py_talloc_dealloc(PyObject* self)
+{
+	py_talloc_Object *obj = (py_talloc_Object *)self;
+	assert(talloc_unlink(NULL, obj->talloc_ctx) != -1);
+	obj->talloc_ctx = NULL;
+	self->ob_type->tp_free(self);
+}
+
+/**
+ * Default (but only slightly more useful than the default) implementation of cmp.
+ */
+static int py_talloc_default_cmp(PyObject *_obj1, PyObject *_obj2)
+{
+	py_talloc_Object *obj1 = (py_talloc_Object *)_obj1,
+					 *obj2 = (py_talloc_Object *)_obj2;
+	if (obj1->ob_type != obj2->ob_type)
+		return (obj1->ob_type - obj2->ob_type);
+
+	return ((char *)py_talloc_get_ptr(obj1) - (char *)py_talloc_get_ptr(obj2));
+}
+
+
+
+static PyTypeObject TallocObject_Type = {
+	.tp_name = "talloc.Object",
+	.tp_basicsize = sizeof(py_talloc_Object),
+	.tp_dealloc = (destructor)py_talloc_dealloc,
+	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_repr = py_talloc_default_repr,
+	.tp_compare = py_talloc_default_cmp,
+};
+
 void inittalloc(void)
 {
 	PyObject *m;
 
+	if (PyType_Ready(&TallocObject_Type) < 0)
+		return;
+
 	m = Py_InitModule3("talloc", talloc_methods, "Debug utilities for talloc-wrapped objects.");
 	if (m == NULL)
 		return;
+
+	Py_INCREF(&TallocObject_Type);
+	PyModule_AddObject(m, "Object", (PyObject *)&TallocObject_Type);
 }

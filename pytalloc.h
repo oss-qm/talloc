@@ -29,8 +29,8 @@ typedef struct {
 	void *ptr;
 } py_talloc_Object;
 
-/* Deallocate a py_talloc_Object */
-void py_talloc_dealloc(PyObject* self);
+PyTypeObject *PyTalloc_GetObjectType(void);
+int PyTalloc_Check(PyObject *);
 
 /* Retrieve the pointer for a py_talloc_object. Like talloc_get_type() 
  * but for py_talloc_Objects. */
@@ -47,14 +47,10 @@ PyObject *py_talloc_steal(PyTypeObject *py_type, void *ptr);
 PyObject *py_talloc_reference_ex(PyTypeObject *py_type, TALLOC_CTX *mem_ctx, void *ptr);
 #define py_talloc_reference(py_type, talloc_ptr) py_talloc_reference_ex(py_type, talloc_ptr, talloc_ptr)
 
-/* Sane default implementation of reprfunc. */
-PyObject *py_talloc_default_repr(PyObject *py_obj);
-
 #define py_talloc_new(type, typeobj) py_talloc_steal(typeobj, talloc_zero(NULL, type))
 
 PyObject *PyCObject_FromTallocPtr(void *);
 
 PyObject *PyString_FromString_check_null(const char *ptr);
-int py_talloc_default_cmp(PyObject *obj1, PyObject *obj2);
 
 #endif /* _PY_TALLOC_H_ */
