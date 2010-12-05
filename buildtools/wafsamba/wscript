@@ -53,8 +53,11 @@ def set_options(opt):
                    help=("Disable use of rpath for build binaries"),
                    action="store_true", dest='disable_rpath_build', default=False)
     gr.add_option('--disable-rpath-install',
-                   help=("Disable use of rpath for installed binaries"),
+                   help=("Disable use of rpath for library path in installed files"),
                    action="store_true", dest='disable_rpath_install', default=False)
+    gr.add_option('--disable-rpath-private-install',
+                   help=("Disable use of rpath for private library path in installed files"),
+                   action="store_true", dest='disable_rpath_private_install', default=False)
     gr.add_option('--nonshared-binary',
                    help=("Disable use of shared libs for the listed binaries"),
                    action="store", dest='NONSHARED_BINARIES', default='')
@@ -62,6 +65,10 @@ def set_options(opt):
     opt.add_option('--with-modulesdir',
                    help=("modules directory [PREFIX/modules]"),
                    action="store", dest='MODULESDIR', default='${PREFIX}/modules')
+
+    opt.add_option('--with-privatelibdir',
+                   help=("private library directory [PREFIX/lib/%s]" % Utils.g_module.APPNAME),
+                   action="store", dest='PRIVATELIBDIR', default=None)
 
     gr = opt.option_group('developer options')
 
@@ -89,6 +96,9 @@ def set_options(opt):
     gr.add_option('--pedantic',
 		   help=("Enable even more compiler warnings"),
 		   action='store_true', dest='pedantic', default=False)
+    gr.add_option('--git-local-changes',
+		   help=("mark version with + if local git changes"),
+		   action='store_true', dest='GIT_LOCAL_CHANGES', default=False)
 
     gr.add_option('--abi-check',
 		   help=("Check ABI signatures for libraries"),
@@ -201,6 +211,7 @@ def configure(conf):
     conf.env.BINDIR = Options.options.BINDIR or '${PREFIX}/bin'
     conf.env.SBINDIR = Options.options.SBINDIR or '${PREFIX}/sbin'
     conf.env.MODULESDIR = Options.options.MODULESDIR
+    conf.env.PRIVATELIBDIR = Options.options.PRIVATELIBDIR
     conf.env.BUNDLED_LIBS = Options.options.BUNDLED_LIBS.split(',')
     conf.env.BUILTIN_LIBRARIES = Options.options.BUILTIN_LIBRARIES.split(',')
     conf.env.DISABLE_SHARED = Options.options.disable_shared
@@ -236,6 +247,8 @@ def configure(conf):
     except:
         conf.env.ABI_CHECK = False
 
+    conf.env.GIT_LOCAL_CHANGES = Options.options.GIT_LOCAL_CHANGES
+
     conf.CHECK_COMMAND(['uname', '-a'],
                        msg='Checking build system',
                        define='BUILD_SYSTEM',
@@ -259,9 +272,19 @@ def configure(conf):
         conf.env.RPATH_ON_BUILD   = not Options.options.disable_rpath_build
         conf.env.RPATH_ON_INSTALL = (conf.env.RPATH_ON_BUILD and
                                      not Options.options.disable_rpath_install)
+        if not conf.env.PRIVATELIBDIR:
+            conf.env.PRIVATELIBDIR = '${PREFIX}/lib/%s' % Utils.g_module.APPNAME
+        conf.env.RPATH_ON_INSTALL_PRIVATE = (
+            not Options.options.disable_rpath_private_install)
     else:
         conf.env.RPATH_ON_INSTALL = False
         conf.env.RPATH_ON_BUILD   = False
+        conf.env.RPATH_ON_INSTALL_PRIVATE = False
+        if not conf.env.PRIVATELIBDIR:
+            # rpath is not possible so there is no sense in having a
+            # private library directory by default.
+            # the user can of course always override it.
+            conf.env.PRIVATELIBDIR = conf.env.LIBDIR
 
     # we should use the PIC options in waf instead
     # Some compilo didn't support -fPIC but just print a warning

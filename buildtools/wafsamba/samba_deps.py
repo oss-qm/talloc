@@ -90,7 +90,12 @@ def build_dependencies(self):
 
     if self.samba_type in ['SUBSYSTEM']:
         # this is needed for the ccflags of libs that come from pkg_config
-        self.uselib = list(self.direct_syslibs)
+        self.uselib = list(self.final_syslibs)
+        self.uselib.extend(list(self.direct_syslibs))
+        for lib in self.final_libs:
+            t = self.bld.name_to_obj(lib, self.bld.env)
+            self.uselib.extend(list(t.final_syslibs))
+        self.uselib = unique_list(self.uselib)
 
     if getattr(self, 'uselib', None):
         up_list = []
@@ -250,7 +255,7 @@ def check_duplicate_sources(bld, tgt_list):
     for t in tgt_list:
         source_list = TO_LIST(getattr(t, 'source', ''))
         tpath = os.path.normpath(os_path_relpath(t.path.abspath(bld.env), t.env.BUILD_DIRECTORY + '/default'))
-	obj_sources = set()
+        obj_sources = set()
         for s in source_list:
             p = os.path.normpath(os.path.join(tpath, s))
             if p in obj_sources:
@@ -352,10 +357,10 @@ def show_final_deps(bld, tgt_list):
     targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
 
     for t in tgt_list:
-        if not targets[t.sname] in ['LIBRARY', 'BINARY', 'PYTHON']:
+        if not targets[t.sname] in ['LIBRARY', 'BINARY', 'PYTHON', 'SUBSYSTEM']:
             continue
         debug('deps: final dependencies for target %s: uselib=%s uselib_local=%s add_objects=%s',
-              t.sname, t.uselib, t.uselib_local, t.add_objects)
+              t.sname, t.uselib, getattr(t, 'uselib_local', []), getattr(t, 'add_objects', []))
 
 
 def add_samba_attributes(bld, tgt_list):
@@ -860,7 +865,7 @@ def calculate_final_deps(bld, tgt_list, loops):
 
     # add in any syslib dependencies
     for t in tgt_list:
-        if not t.samba_type in ['BINARY','PYTHON','LIBRARY']:
+        if not t.samba_type in ['BINARY','PYTHON','LIBRARY','SUBSYSTEM']:
             continue
         syslibs = set()
         for d in t.final_objects:
@@ -950,7 +955,7 @@ savedeps_version = 3
 savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags', 'source', 'grouping_library']
 savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags', 'samba_deps_extended']
 savedeps_outenv  = ['INC_PATHS']
-savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES']
+savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES', 'EXTRA_CFLAGS', 'EXTRA_LDFLAGS' ]
 savedeps_caches  = ['GLOBAL_DEPENDENCIES', 'TARGET_TYPE', 'INIT_FUNCTIONS', 'SYSLIB_DEPS']
 savedeps_files   = ['buildtools/wafsamba/samba_deps.py']
 

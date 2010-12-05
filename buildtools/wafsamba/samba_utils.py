@@ -63,21 +63,35 @@ def ADD_LD_LIBRARY_PATH(path):
         os.environ['LD_LIBRARY_PATH'] = ':'.join(newpath)
 
 
-def install_rpath(bld):
+def needs_private_lib(bld, target):
+    '''return True if a target links to a private library'''
+    for lib in getattr(target, "uselib_local", []):
+        t = bld.name_to_obj(lib, bld.env)
+        if t and getattr(t, 'private_library', False):
+            return True
+        return False
+
+
+def install_rpath(target):
     '''the rpath value for installation'''
+    bld = target.bld
     bld.env['RPATH'] = []
+    ret = set()
     if bld.env.RPATH_ON_INSTALL:
-        return ['%s/lib' % bld.env.PREFIX]
-    return []
+        ret.add(bld.EXPAND_VARIABLES(bld.env.LIBDIR))
+    if bld.env.RPATH_ON_INSTALL_PRIVATE and needs_private_lib(bld, target):
+        ret.add(bld.EXPAND_VARIABLES(bld.env.PRIVATELIBDIR))
+    return list(ret)
 
 
 def build_rpath(bld):
     '''the rpath value for build'''
-    rpath = os.path.normpath('%s/%s' % (bld.env.BUILD_DIRECTORY, LIB_PATH))
+    rpaths = [os.path.normpath('%s/%s' % (bld.env.BUILD_DIRECTORY, d)) for d in ("shared", "shared/private")]
     bld.env['RPATH'] = []
     if bld.env.RPATH_ON_BUILD:
-        return [rpath]
-    ADD_LD_LIBRARY_PATH(rpath)
+        return rpaths
+    for rpath in rpaths:
+        ADD_LD_LIBRARY_PATH(rpath)
     return []
 
 

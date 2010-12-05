@@ -1,7 +1,84 @@
-import Utils;
+import os
+import Utils
 
-class samba_version(object):
-    def __init__(self, version_dict, have_git=False):
+def bzr_version_summary(path):
+    try:
+        from bzrlib import branch, osutils, workingtree
+    except ImportError:
+        return ("BZR-UNKNOWN", {})
+
+    from bzrlib.plugin import load_plugins
+    load_plugins()
+
+    b = branch.Branch.open(path)
+    (revno, revid) = b.last_revision_info()
+    rev = b.repository.get_revision(revid)
+
+    fields = {
+        "BZR_REVISION_ID": revid,
+        "BZR_REVNO": revno,
+        "COMMIT_DATE": osutils.format_date_with_offset_in_original_timezone(rev.timestamp,
+            rev.timezone or 0),
+        "COMMIT_TIME": int(rev.timestamp),
+        "BZR_BRANCH": rev.properties.get("branch-nick", ""),
+        }
+
+    # If possible, retrieve the git sha
+    try:
+        from bzrlib.plugins.git.object_store import get_object_store
+    except ImportError:
+        # No git plugin
+        ret = "BZR-%d" % revno
+    else:
+        store = get_object_store(b.repository)
+        full_rev = store._lookup_revision_sha1(revid)
+        fields["GIT_COMMIT_ABBREV"] = full_rev[:7]
+        fields["GIT_COMMIT_FULLREV"] = full_rev
+        ret = "GIT-" + fields["GIT_COMMIT_ABBREV"]
+
+    if workingtree.WorkingTree.open(path).has_changes():
+        fields["COMMIT_IS_CLEAN"] = 0
+        ret += "+"
+    else:
+        fields["COMMIT_IS_CLEAN"] = 1
+    return (ret, fields)
+
+
+def git_version_summary(path, env=None):
+    # Get version from GIT
+    if not 'GIT' in env:
+        return ("GIT-UNKNOWN", {})
+
+    os.putenv('GIT_DIR', '%s/.git' % path)
+    git = Utils.cmd_output(env.GIT + ' show --pretty=format:"%h%n%ct%n%H%n%cd" --stat HEAD', silent=True)
+
+    lines = git.splitlines()
+    if not lines or len(lines) < 4:
+        return ("GIT-UNKNOWN", {})
+
+    fields = {
+            "GIT_COMMIT_ABBREV": lines[0],
+            "GIT_COMMIT_FULLREV": lines[2],
+            "COMMIT_TIME": int(lines[1]),
+            "COMMIT_DATE": lines[3],
+            }
+
+    ret = "GIT-" + fields["GIT_COMMIT_ABBREV"]
+
+    if env.GIT_LOCAL_CHANGES:
+        clean = Utils.cmd_output('git diff HEAD | wc -l', silent=True).strip()
+        if clean == "0":
+            fields["COMMIT_IS_CLEAN"] = 1
+        else:
+            fields["COMMIT_IS_CLEAN"] = 0
+            ret += "+"
+
+    return (ret, fields)
+
+
+class SambaVersion(object):
+
+    def __init__(self, version_dict, path, env=None):
         '''Determine the version number of samba
 
 See VERSION for the format.  Entries on that file are 
@@ -16,7 +93,7 @@ also accepted as dictionary entries here
         self.ALPHA_RELEASE=None
         self.PRE_RELEASE=None
         self.RC_RELEASE=None
-        self.IS_GIT_SNAPSHOT=True
+        self.IS_SNAPSHOT=True
         self.RELEASE_NICKNAME=None
         self.VENDOR_SUFFIX=None
         self.VENDOR_PATCH=None
@@ -28,10 +105,12 @@ also accepted as dictionary entries here
                 setattr(self, a, b)
 
         if self.IS_GIT_SNAPSHOT == "yes":
-            self.IS_GIT_SNAPSHOT=True
+            self.IS_SNAPSHOT=True
         elif self.IS_GIT_SNAPSHOT == "no":
-            self.IS_GIT_SNAPSHOT=False
-                
+            self.IS_SNAPSHOT=False
+        else:
+            raise Exception("Unknown value for IS_GIT_SNAPSHOT: %s" % self.IS_GIT_SNAPSHOT)
+
  ##
  ## start with "3.0.22"
  ##
@@ -49,7 +128,7 @@ also accepted as dictionary entries here
             SAMBA_VERSION_STRING += self.REVISION
         if self.TP_RELEASE is not None:
             self.TP_RELEASE = int(self.TP_RELEASE)
-            SAMBA_VERSION_STRING += ("tp%u" % self.TP_RELEASE)
+            SAMBA_VERSION_STRING += "tp%u" % self.TP_RELEASE
         if self.ALPHA_RELEASE is not None:
             self.ALPHA_RELEASE = int(self.ALPHA_RELEASE)
             SAMBA_VERSION_STRING += ("alpha%u" % self.ALPHA_RELEASE)
@@ -60,32 +139,19 @@ also accepted as dictionary entries here
             self.RC_RELEASE = int(self.RC_RELEASE)
             SAMBA_VERSION_STRING += ("rc%u" % self.RC_RELEASE)
 
-        if self.IS_GIT_SNAPSHOT:
-            #Get version from GIT
-            if have_git:
-                git = Utils.cmd_output('git show --pretty=format:"%h%n%ct%n%H%n%cd" --stat HEAD', silent=True)
+        if self.IS_SNAPSHOT:
+            if os.path.exists(os.path.join(path, ".git")):
+                suffix, self.vcs_fields = git_version_summary(path, env=env)
+            elif os.path.exists(os.path.join(path, ".bzr")):
+                suffix, self.vcs_fields = bzr_version_summary(path)
             else:
-                git = ''
+                suffix = "UNKNOWN"
+                self.vcs_fields = {}
+            SAMBA_VERSION_STRING += "-" + suffix
+        else:
+            self.vcs_fields = {}
 
-            if git == '':
-                SAMBA_VERSION_STRING += "-GIT-UNKNOWN"
-            else:
-                lines = git.splitlines();
-                self.GIT_COMMIT_ABBREV = lines[0]
-                self.GIT_COMMIT_TIME = lines[1]
-                self.GIT_COMMIT_FULLREV = lines[2]
-                self.GIT_COMMIT_DATE = lines[3]
-
-                SAMBA_VERSION_STRING += ("-GIT-" + self.GIT_COMMIT_ABBREV)
-
-                clean = Utils.cmd_output('git diff HEAD | wc -l', silent=True)
-                if clean == "0\n":
-                    self.GIT_COMMIT_IS_CLEAN = True
-                else:
-                    self.GIT_COMMIT_IS_CLEAN = False
-                    SAMBA_VERSION_STRING += "+"
-
-        self.OFFICIAL_STRING=SAMBA_VERSION_STRING
+        self.OFFICIAL_STRING = SAMBA_VERSION_STRING
 
         if self.VENDOR_SUFFIX is not None:
             SAMBA_VERSION_STRING += ("-" + self.VENDOR_SUFFIX)
@@ -102,7 +168,7 @@ also accepted as dictionary entries here
             self.RELEASE_NICKNAME = self.RELEASE_NICKNAME
         else:
             self.STRING_WITH_NICKNAME = self.STRING
-    
+
     def __str__(self):
         string="/* Autogenerated by waf */\n"
         string+="#define SAMBA_VERSION_MAJOR %u\n" % self.MAJOR
@@ -123,15 +189,16 @@ also accepted as dictionary entries here
         if self.RC_RELEASE is not None:
             string+="#define SAMBA_VERSION_RC_RELEASE %u\n" % self.RC_RELEASE
 
-        try:
-            string+="#define SAMBA_VERSION_GIT_COMMIT_ABBREV \"" + self.GIT_COMMIT_ABBREV + "\"\n"
-            string+="#define SAMBA_VERSION_GIT_COMMIT_FULLREV \"" + self.GIT_COMMIT_FULLREV + "\"\n"
-            string+="#define SAMBA_VERSION_GIT_COMMIT_DATE \"" + self.GIT_COMMIT_DATE + "\"\n"
-            string+="#define SAMBA_VERSION_GIT_COMMIT_TIME " + self.GIT_COMMIT_TIME + "\n"
-            if self.GIT_COMMIT_IS_CLEAN:
-                string+="#define SAMBA_VERSION_GIT_COMMIT_IS_CLEAN 1\n"
-        except AttributeError:
-            pass
+        for name in sorted(self.vcs_fields.keys()):
+            string+="#define SAMBA_VERSION_%s " % name
+            value = self.vcs_fields[name]
+            if isinstance(value, basestring):
+                string += "\"%s\"" % value
+            elif type(value) is int:
+                string += "%d" % value
+            else:
+                raise Exception("Unknown type for %s: %r" % (name, value))
+            string += "\n"
 
         string+="#define SAMBA_VERSION_OFFICIAL_STRING \"" + self.OFFICIAL_STRING + "\"\n"
 
@@ -156,24 +223,24 @@ also accepted as dictionary entries here
         return string
 
 
-class samba_version_file(samba_version):
-    def __init__(self, version_file, have_git=False):
-        '''Parse the version information from a VERSION file'''
-        f = open(version_file, 'r')
-        version_dict = {}
-        for line in f:
-            try:
-                line = line.strip()
-                if line == '':
-                    continue
-                if line.startswith("#"):
-                    continue
-                split_line=line.split("=")
-                if split_line[1] != "":
-                    value = split_line[1].strip('"')
-                    version_dict[split_line[0]] = value
-            except:
-                print("Failed to parse line %s from %s" % (line, version_file))
-                raise
-            
-        super(samba_version_file, self).__init__(version_dict, have_git=have_git)
+def samba_version_file(version_file, path, env=None):
+    '''Parse the version information from a VERSION file'''
+
+    f = open(version_file, 'r')
+    version_dict = {}
+    for line in f:
+        line = line.strip()
+        if line == '':
+            continue
+        if line.startswith("#"):
+            continue
+        try:
+            split_line = line.split("=")
+            if split_line[1] != "":
+                value = split_line[1].strip('"')
+                version_dict[split_line[0]] = value
+        except:
+            print("Failed to parse line %s from %s" % (line, version_file))
+            raise
+
+    return SambaVersion(version_dict, path, env=env)

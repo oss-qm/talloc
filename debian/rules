@@ -49,7 +49,11 @@ install: build
 	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
+<<<<<<< TREE
 	ar -rc libtalloc.a bin/default/talloc_*.o
+=======
+	ar -rc libtalloc.a bin/default/talloc_?.o
+>>>>>>> MERGE-SOURCE
 	cp libtalloc.a $(DESTDIR)/usr/lib
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 

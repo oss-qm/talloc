@@ -19,7 +19,7 @@ Description: hierarchical pool based memory allocator
 
 Package: libtalloc-dev
 Section: libdevel
-Depends: libtalloc2 (=${binary:Version}), ${misc:Depends}
+Depends: libtalloc2 (=${binary:Version}), ${misc:Depends}, pkg-config
 Architecture: any
 Description: hierarchical pool based memory allocator - development files
  A hierarchical pool based memory allocator with destructors. It uses
@@ -27,23 +27,22 @@ Description: hierarchical pool based memory allocator - development files
  .
  This package contains the development files.
 
-Package: libpytalloc-util2
-Section: libdevel
+Package: python-talloc
+Architecture: any
+Section: python
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Architecture: any
-Description: hierarchical pool based memor allocator - python helper library
+Description: hierarchical pool based memory allocator - Python bindings
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
  .
- This package contains a library with convenience functions for use with Python
- objects.
+ This package contains the Python bindings.
 
-Package: libpytalloc-util-dev
+Package: python-talloc-dev
+Architecture: all
 Section: libdevel
-Depends: libpytalloc-util2 (=${binary:Version}), libtalloc-dev (= ${binary:Version}), ${misc:Depends}
-Architecture: any
-Description: hierarchical pool based memor allocator - python helper development files
+Depends: python-talloc (>= ${source:Version}), ${misc:Depends}, pkg-config
+Description: talloc Python bindings - development files
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
  .
- This package contains the development files for the Python convenience library.
+ This package contains the development files for the Python bindings.
