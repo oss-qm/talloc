@@ -1,7 +1,7 @@
 # customised version of 'waf dist' for Samba tools
 # uses git ls-files to get file lists
 
-import Utils, os, sys, tarfile, gzip, stat, Scripting, Logs, Options
+import Utils, os, sys, tarfile, stat, Scripting, Logs, Options
 from samba_utils import *
 
 dist_dirs = None
@@ -86,7 +86,7 @@ def vcs_dir_contents(path):
             env["GIT_DIR"] = os.path.join(repo, ".git")
             break
         elif os.path.isdir(os.path.join(repo, ".bzr")):
-            ls_files_cmd = [ 'bzr', 'ls', '--versioned', '--recursive',
+            ls_files_cmd = [ 'bzr', 'ls', '--recursive', '--versioned',
                              os.path.relpath(path, repo)]
             cwd = repo
             env = None
@@ -160,6 +160,7 @@ def dist(appname='',version=''):
     tar.close()
 
     if Options.options.SIGN_RELEASE:
+        import gzip
         try:
             os.unlink(dist_name + '.asc')
         except OSError:

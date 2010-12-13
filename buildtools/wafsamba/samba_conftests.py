@@ -108,6 +108,51 @@ int foo(int v) {
     return conf.check(features='cc cshlib',vnum="1",fragment=snip,msg=msg)
 
 @conf
+def CHECK_NEED_LC(conf, msg):
+    '''check if we need -lc'''
+
+    dir = find_config_dir(conf)
+
+    env = conf.env
+
+    bdir = os.path.join(dir, 'testbuild2')
+    if not os.path.exists(bdir):
+        os.makedirs(bdir)
+
+
+    subdir = os.path.join(dir, "liblctest")
+
+    os.makedirs(subdir)
+
+    dest = open(os.path.join(subdir, 'liblc1.c'), 'w')
+    dest.write('#include <stdio.h>\nint lib_func(void) { FILE *f = fopen("foo", "r");}\n')
+    dest.close()
+
+    bld = Build.BuildContext()
+    bld.log = conf.log
+    bld.all_envs.update(conf.all_envs)
+    bld.all_envs['default'] = env
+    bld.lst_variants = bld.all_envs.keys()
+    bld.load_dirs(dir, bdir)
+
+    bld.rescan(bld.srcnode)
+
+    bld(features='cc cshlib',
+        source='liblctest/liblc1.c',
+        ldflags=conf.env['EXTRA_LDFLAGS'],
+        target='liblc',
+        name='liblc')
+
+    try:
+        bld.compile()
+        conf.check_message(msg, '', True)
+        return True
+    except:
+        conf.check_message(msg, '', False)
+        return False
+
+
+@conf
 def CHECK_SHLIB_W_PYTHON(conf, msg):
     '''check if we need -undefined dynamic_lookup'''
 
@@ -133,7 +178,7 @@ int foo(int v) {
 # into several parts. I'd quite like to create a set of CHECK_COMPOUND()
 # functions that make writing complex compound tests like this much easier
 @conf
-def CHECK_LIBRARY_SUPPORT(conf, rpath=False, msg=None):
+def CHECK_LIBRARY_SUPPORT(conf, rpath=False, version_script=False, msg=None):
     '''see if the platform supports building libraries'''
 
     if msg is None:
@@ -171,9 +216,17 @@ def CHECK_LIBRARY_SUPPORT(conf, rpath=False, msg=None):
 
     bld.rescan(bld.srcnode)
 
+    ldflags = []
+    if version_script:
+        ldflags.append("-Wl,--version-script=%s/vscript" % bld.path.abspath())
+        dest = open(os.path.join(dir,'vscript'), 'w')
+        dest.write('TEST_1.0A2 { global: *; };\n')
+        dest.close()
+
     bld(features='cc cshlib',
         source='libdir/lib1.c',
         target='libdir/lib1',
+        ldflags=ldflags,
         name='lib1')
 
     o = bld(features='cc cprogram',

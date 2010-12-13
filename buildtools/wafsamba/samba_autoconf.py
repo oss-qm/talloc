@@ -448,10 +448,19 @@ def CHECK_LDFLAGS(conf, ldflags):
 
 
 @conf
+def CONFIG_GET(conf, option):
+    '''return True if a configuration option was found'''
+    if (option in conf.env):
+        return conf.env[option]
+    else:
+        return None
+
+@conf
 def CONFIG_SET(conf, option):
     '''return True if a configuration option was found'''
     return (option in conf.env) and (conf.env[option] != ())
 Build.BuildContext.CONFIG_SET = CONFIG_SET
+Build.BuildContext.CONFIG_GET = CONFIG_GET
 
 
 def library_flags(conf, libs):
@@ -587,7 +596,7 @@ def SAMBA_CONFIG_H(conf, path=None):
 
     if Options.options.developer:
         # we add these here to ensure that -Wstrict-prototypes is not set during configure
-        conf.ADD_CFLAGS('-Wall -g -Wshadow -Wstrict-prototypes -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Werror-implicit-function-declaration -Wformat=2 -Wno-format-y2k',
+        conf.ADD_CFLAGS('-Wall -g -Wshadow -Wstrict-prototypes -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Werror-implicit-function-declaration -Wformat=2 -Wno-format-y2k -Wmissing-prototypes',
                         testflags=True)
         conf.env.DEVELOPER_MODE = True
 
