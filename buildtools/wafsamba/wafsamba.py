@@ -23,6 +23,7 @@ import samba_conftests
 import samba_abi
 import tru64cc
 import irixcc
+import hpuxcc
 import generic_cc
 import samba_dist
 import samba_wildcard
@@ -102,6 +103,7 @@ def SAMBA_LIBRARY(bld, libname, source,
                   vnum=None,
                   soname=None,
                   cflags='',
+                  ldflags='',
                   external_library=False,
                   realname=None,
                   autoproto=None,
@@ -116,7 +118,7 @@ def SAMBA_LIBRARY(bld, libname, source,
                   target_type='LIBRARY',
                   bundled_extension=True,
                   link_name=None,
-                  abi_file=None,
+                  abi_directory=None,
                   abi_match=None,
                   hide_symbols=False,
                   manpages=None,
@@ -187,11 +189,7 @@ def SAMBA_LIBRARY(bld, libname, source,
     else:
         bundled_name = PRIVATE_NAME(bld, libname, bundled_extension, private_library)
 
-    if private_library:
-        if vnum:
-            Logs.error("vnum is invalid for private libraries")
-            sys.exit(1)
-        vnum = Utils.g_module.VERSION
+    ldflags = TO_LIST(ldflags)
 
     features = 'cc cshlib symlink_lib install_lib'
     if target_type == 'PYTHON':
@@ -200,11 +198,27 @@ def SAMBA_LIBRARY(bld, libname, source,
         # this is quite strange. we should add pyext feature for pyext
         # but that breaks the build. This may be a bug in the waf python tool
         features += ' pyembed'
-    if abi_file:
+
+    if abi_directory:
         features += ' abi_check'
 
-    if abi_file:
-        abi_file = os.path.join(bld.curdir, abi_file)
+    if bld.env.HAVE_LD_VERSION_SCRIPT:
+        vscript = "%s.vscript" % libname
+        if private_library:
+            version = "%s_%s" % (Utils.g_module.APPNAME, Utils.g_module.VERSION)
+        elif vnum:
+            version = "%s_%s" % (libname, vnum)
+        else:
+            version = None
+        if version:
+            bld.ABI_VSCRIPT(libname, abi_directory, version, vscript)
+            ldflags.append("-Wl,--version-script=%s/%s" % (bld.path.abspath(bld.env), vscript))
+            fullname = bld.env.shlib_PATTERN % bundled_name
+            bld.add_manual_dependency(bld.path.find_or_declare(fullname), bld.path.find_or_declare(vscript))
+            if Options.is_install:
+                # also make the .inst file depend on the vscript
+                instname = bld.env.shlib_PATTERN % (bundled_name + '.inst')
+                bld.add_manual_dependency(bld.path.find_or_declare(instname), bld.path.find_or_declare(vscript))
 
     bld.SET_BUILD_GROUP(group)
     t = bld(
@@ -212,6 +226,7 @@ def SAMBA_LIBRARY(bld, libname, source,
         source          = [],
         target          = bundled_name,
         depends_on      = depends_on,
+        ldflags		= ldflags,
         samba_deps      = deps,
         samba_includes  = includes,
         local_include   = local_include,
@@ -222,7 +237,7 @@ def SAMBA_LIBRARY(bld, libname, source,
         name            = libname,
         samba_realname  = realname,
         samba_install   = install,
-        abi_file        = abi_file,
+        abi_directory   = "%s/%s" % (bld.path.abspath(), abi_directory),
         abi_match       = abi_match,
         private_library = private_library,
         grouping_library=grouping_library
@@ -504,6 +519,8 @@ def SAMBA_GENERATOR(bld, name, rule, source='', target='',
         on_results=True,
         before='cc',
         ext_out='.c',
+        samba_type='GENERATOR',
+        vars = [rule],
         name=name)
 
     if always:
@@ -524,6 +541,7 @@ def SETUP_BUILD_GROUPS(bld):
     bld.env['USING_BUILD_GROUPS'] = True
     bld.add_group('setup')
     bld.add_group('build_compiler_source')
+    bld.add_group('vscripts')
     bld.add_group('base_libraries')
     bld.add_group('generators')
     bld.add_group('compiler_prototypes')

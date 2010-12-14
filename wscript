@@ -59,7 +59,7 @@ def configure(conf):
         # also disable if we don't have the python libs installed
         conf.check_tool('python')
         conf.check_python_version((2,4,2))
-        conf.check_python_headers(mandatory=False)
+        conf.SAMBA_CHECK_PYTHON_HEADERS(mandatory=False)
         if not conf.env.HAVE_PYTHON_H:
             Logs.warn('Disabling pytalloc-util as python devel libs not found')
             conf.env.disable_python = True
@@ -76,7 +76,6 @@ def build(bld):
         bld.PKG_CONFIG_FILES('talloc.pc', vnum=VERSION)
         bld.INSTALL_FILES('${INCLUDEDIR}', 'talloc.h')
         private_library = False
-        vnum = VERSION
 
         # should we also install the symlink to libtalloc1.so here?
         bld.SAMBA_LIBRARY('talloc-compat1-%s' % (VERSION),
@@ -89,17 +88,16 @@ def build(bld):
             bld.PKG_CONFIG_FILES('pytalloc-util.pc', vnum=VERSION)
     else:
         private_library = True
-        vnum = None
 
     if not bld.CONFIG_SET('USING_SYSTEM_TALLOC'):
 
         bld.SAMBA_LIBRARY('talloc',
                           'talloc.c',
                           deps='replace',
-                          abi_file='ABI/talloc-%s.sigs' % VERSION,
+                          abi_directory='ABI',
                           abi_match='talloc* _talloc*',
                           hide_symbols=True,
-                          vnum=vnum,
+                          vnum=VERSION,
                           private_library=private_library,
                           manpages='talloc.3')
 
@@ -110,6 +108,7 @@ def build(bld):
             public_deps='talloc',
             pyext=True,
             vnum=VERSION,
+            private_library=private_library,
             )
         bld.INSTALL_FILES('${INCLUDEDIR}', 'pytalloc.h')
         bld.SAMBA_PYTHON('pytalloc',
@@ -142,3 +141,10 @@ def reconfigure(ctx):
     '''reconfigure if config scripts have changed'''
     import samba_utils
     samba_utils.reconfigure(ctx)
+
+
+def pydoctor(ctx):
+    '''build python apidocs'''
+    cmd='PYTHONPATH=bin/python pydoctor --project-name=talloc --project-url=http://talloc.samba.org/ --make-html --docformat=restructuredtext --introspect-c-modules --add-module bin/python/talloc.*'
+    print("Running: %s" % cmd)
+    os.system(cmd)
