@@ -1,3 +1,10 @@
+talloc (2.0.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * Link with --as-needed.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 21 Dec 2010 16:32:33 +0100
+
 talloc (2.0.4~git20101213-1) experimental; urgency=low
 
   * New upstream snapshot.

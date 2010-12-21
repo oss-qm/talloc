@@ -8,9 +8,11 @@ else
 CFLAGS += -O2
 endif
 
+LDFLAGS += -Wl,--as-needed
+
 DESTDIR=$(CURDIR)/debian/tmp
 
-conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE 
+conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 
 configure: configure-stamp
@@ -32,7 +34,7 @@ endif
 get-orig-source:
 	./debian/build-orig.sh
 
-clean: 
+clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
@@ -66,6 +68,7 @@ binary-arch: build install
 	dh_compress
 	dh_fixperms
 	dh_makeshlibs -- -c4
+	dh_pysupport
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol
@@ -75,4 +78,4 @@ binary-arch: build install
 binary-indep:
 
 binary: binary-arch binary-indep
-.PHONY: build clean binary-arch binary install configure 
+.PHONY: build clean binary-arch binary install configure

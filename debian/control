@@ -6,8 +6,7 @@ Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
 Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python, python-dev, python-support
 Standards-Version: 3.9.1
-Vcs-Bzr: http://bzr.debian.org/pkg-samba/talloc/experimental
-DM-Upload-Allowed: yes
+Vcs-Bzr: http://bzr.debian.org/pkg-samba/talloc/unstable
 
 Package: libtalloc2
 Architecture: any
@@ -30,7 +29,9 @@ Description: hierarchical pool based memory allocator - development files
 Package: python-talloc
 Architecture: any
 Section: python
-Depends: ${shlibs:Depends}, ${misc:Depends}
+XB-Python-Version: ${python:Versions}
+Provides: ${python:Provides}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
 Description: hierarchical pool based memory allocator - Python bindings
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.

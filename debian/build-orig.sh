@@ -1,11 +1,15 @@
-#!/bin/bash
+#!/bin/bash -e
 
-if [ -z "$GIT_URL" ]; then
-	GIT_URL=git://git.samba.org/samba.git
+if [ -z "$SAMBA_GIT_URL" ]; then
+	SAMBA_GIT_URL=git://git.samba.org/samba.git
 fi
 
 TALLOCTMP=`mktemp -d`
-git clone --depth 1 $GIT_URL $TALLOCTMP
+if [ -d $SAMBA_GIT_URL/.bzr ]; then
+	bzr co --lightweight $SAMBA_GIT_URL $TALLOCTMP
+else
+	git clone --depth 1 $SAMBA_GIT_URL $TALLOCTMP
+fi
 pushd $TALLOCTMP/lib/talloc
 ./autogen-waf.sh
 ./configure
