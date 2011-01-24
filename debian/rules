@@ -18,7 +18,6 @@ conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-	./autogen-waf.sh
 	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
 	touch configure-stamp
 

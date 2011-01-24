@@ -1,6 +1,6 @@
 libtalloc.so.2 #PACKAGE# #MINVER#
  TALLOC_2.0.2@TALLOC_2.0.2 2.0.4~git20101213
- TALLOC_2.0.4@TALLOC_2.0.4 2.0.4~git20101213
+ TALLOC_2.0.5@TALLOC_2.0.5 2.0.5
  _talloc@TALLOC_2.0.2 2.0.4~git20101213
  _talloc_array@TALLOC_2.0.2 2.0.4~git20101213
  _talloc_free@TALLOC_2.0.2 2.0.4~git20101213
@@ -14,12 +14,6 @@ libtalloc.so.2 #PACKAGE# #MINVER#
  _talloc_steal_loc@TALLOC_2.0.2 2.0.4~git20101213
  _talloc_zero@TALLOC_2.0.2 2.0.4~git20101213
  _talloc_zero_array@TALLOC_2.0.2 2.0.4~git20101213
- dummy_snprintf@TALLOC_2.0.4 2.0.4~git20101213
- rep_getpass@TALLOC_2.0.4 2.0.4~git20101213
- rep_strerror_r@TALLOC_2.0.4 2.0.4~git20101213
- rep_strlcat@TALLOC_2.0.4 2.0.4~git20101213
- rep_strlcpy@TALLOC_2.0.4 2.0.4~git20101213
- replace_dummy@TALLOC_2.0.4 2.0.4~git20101213
  talloc_asprintf@TALLOC_2.0.2 2.0.4~git20101213
  talloc_asprintf_append@TALLOC_2.0.2 2.0.4~git20101213
  talloc_asprintf_append_buffer@TALLOC_2.0.2 2.0.4~git20101213

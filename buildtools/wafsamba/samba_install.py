@@ -128,19 +128,14 @@ def install_library(self):
         t.env.append_value('LINKFLAGS', t.env.SONAME_ST % install_link)
         t.env.SONAME_ST = ''
 
-    if install_name == install_link:
-        install_link = None
-
     # tell waf to install the library
     bld.install_as(os.path.join(install_path, install_name),
                    os.path.join(self.path.abspath(bld.env), inst_name))
-    if install_link:
+    if install_link and install_link != install_name:
         # and the symlink if needed
-        bld.symlink_as(os.path.join(install_path, install_link),
-                       install_name)
+        bld.symlink_as(os.path.join(install_path, install_link), install_name)
     if dev_link:
-        bld.symlink_as(os.path.join(install_path, dev_link),
-                       install_name)
+        bld.symlink_as(os.path.join(install_path, dev_link), install_name)
 
 
 @feature('cshlib')
@@ -152,6 +147,18 @@ def apply_soname(self):
     if self.env.SONAME_ST and getattr(self, 'soname', ''):
         self.env.append_value('LINKFLAGS', self.env.SONAME_ST % self.soname)
         self.env.SONAME_ST = ''
+
+@feature('cshlib')
+@after('apply_implib')
+@before('apply_vnum')
+def apply_vscript(self):
+    '''add version-script arguments to library build'''
+
+    if self.env.HAVE_LD_VERSION_SCRIPT and getattr(self, 'version_script', ''):
+        self.env.append_value('LINKFLAGS', "-Wl,--version-script=%s" %
+            self.version_script)
+        self.version_script = None
+
 
 ##############################
 # handle the creation of links for libraries and binaries in the build tree

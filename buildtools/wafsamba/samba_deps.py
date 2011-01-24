@@ -1,6 +1,6 @@
 # Samba automatic dependency handling and project rules
 
-import Build, os, re, Environment, Logs, time
+import Build, os, sys, re, Environment, Logs, time
 from samba_utils import *
 from samba_autoconf import *
 from samba_bundled import BUILTIN_LIBRARY
@@ -81,7 +81,7 @@ def build_dependencies(self):
         libs = self.final_syslibs.copy()
 
         (ccflags, ldflags) = library_flags(self, list(libs))
-        new_ldflags        = getattr(self, 'ldflags', [])
+        new_ldflags        = getattr(self, 'samba_ldflags', [])[:]
         new_ldflags.extend(ldflags)
         self.ldflags       = new_ldflags
 
@@ -953,7 +953,7 @@ def show_object_duplicates(bld, tgt_list):
 # this provides a way to save our dependency calculations between runs
 savedeps_version = 3
 savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags',
-                    'source', 'grouping_library', 'ldflags']
+                    'source', 'grouping_library', 'samba_ldflags']
 savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags', 'samba_deps_extended']
 savedeps_outenv  = ['INC_PATHS']
 savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES', 'EXTRA_CFLAGS', 'EXTRA_LDFLAGS' ]
@@ -1099,7 +1099,7 @@ def check_project_rules(bld):
     global tstart
     tstart = time.clock()
 
-    bld.new_rules = True    
+    bld.new_rules = True
     Logs.info("Checking project rules ...")
 
     debug('deps: project rules checking started')
