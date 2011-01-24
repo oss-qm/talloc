@@ -21,6 +21,8 @@
 #include <talloc.h>
 #include <pytalloc.h>
 
+void inittalloc(void);
+
 /* print a talloc tree report for a talloc python object */
 static PyObject *py_talloc_report_full(PyObject *self, PyObject *args)
 {
@@ -109,8 +111,6 @@ static int py_talloc_default_cmp(PyObject *_obj1, PyObject *_obj2)
 
 	return ((char *)py_talloc_get_ptr(obj1) - (char *)py_talloc_get_ptr(obj2));
 }
-
-
 
 static PyTypeObject TallocObject_Type = {
 	.tp_name = "talloc.Object",

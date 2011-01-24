@@ -1,7 +1,7 @@
 # a waf tool to add autoconf-like macros to the configure section
 # and for SAMBA_ macros for building libraries, binaries etc
 
-import Build, os, Options, Task, Utils, cc, TaskGen, fnmatch, re, shutil, Logs, Constants
+import Build, os, sys, Options, Task, Utils, cc, TaskGen, fnmatch, re, shutil, Logs, Constants
 from Configure import conf
 from Logs import debug
 from samba_utils import SUBST_VARS_RECURSIVE
@@ -202,8 +202,8 @@ def SAMBA_LIBRARY(bld, libname, source,
     if abi_directory:
         features += ' abi_check'
 
+    vscript = None
     if bld.env.HAVE_LD_VERSION_SCRIPT:
-        vscript = "%s.vscript" % libname
         if private_library:
             version = "%s_%s" % (Utils.g_module.APPNAME, Utils.g_module.VERSION)
         elif vnum:
@@ -211,14 +211,16 @@ def SAMBA_LIBRARY(bld, libname, source,
         else:
             version = None
         if version:
-            bld.ABI_VSCRIPT(libname, abi_directory, version, vscript)
-            ldflags.append("-Wl,--version-script=%s/%s" % (bld.path.abspath(bld.env), vscript))
+            vscript = "%s.vscript" % libname
+            bld.ABI_VSCRIPT(libname, abi_directory, version, vscript,
+                            abi_match)
             fullname = bld.env.shlib_PATTERN % bundled_name
             bld.add_manual_dependency(bld.path.find_or_declare(fullname), bld.path.find_or_declare(vscript))
             if Options.is_install:
                 # also make the .inst file depend on the vscript
                 instname = bld.env.shlib_PATTERN % (bundled_name + '.inst')
                 bld.add_manual_dependency(bld.path.find_or_declare(instname), bld.path.find_or_declare(vscript))
+            vscript = os.path.join(bld.path.abspath(bld.env), vscript)
 
     bld.SET_BUILD_GROUP(group)
     t = bld(
@@ -226,9 +228,10 @@ def SAMBA_LIBRARY(bld, libname, source,
         source          = [],
         target          = bundled_name,
         depends_on      = depends_on,
-        ldflags		= ldflags,
+        samba_ldflags   = ldflags,
         samba_deps      = deps,
         samba_includes  = includes,
+        version_script  = vscript,
         local_include   = local_include,
         vnum            = vnum,
         soname          = soname,
@@ -338,7 +341,8 @@ def SAMBA_BINARY(bld, binname, source,
         samba_subsystem= subsystem_name,
         install_path   = None,
         samba_inst_path= install_path,
-        samba_install  = install
+        samba_install  = install,
+        samba_ldflags  = TO_LIST(ldflags)
         )
 
     if manpages is not None and 'XSLTPROC_MANPAGES' in bld.env and bld.env['XSLTPROC_MANPAGES']:
@@ -361,7 +365,7 @@ def SAMBA_MODULE(bld, modname, source,
                  local_include=True,
                  vars=None,
                  enabled=True,
-                 pyembed=True,
+                 pyembed=False,
                  ):
     '''define a Samba module.'''
 

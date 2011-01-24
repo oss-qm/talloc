@@ -224,9 +224,9 @@ static void talloc_abort_magic(unsigned magic)
 	talloc_abort("Bad talloc magic value - wrong talloc version used/mixed");
 }
 
-static void talloc_abort_double_free(void)
+static void talloc_abort_access_after_free(void)
 {
-	talloc_abort("Bad talloc magic value - double free");
+	talloc_abort("Bad talloc magic value - access after free");
 }
 
 static void talloc_abort_unknown_value(void)
@@ -246,8 +246,8 @@ static inline struct talloc_chunk *talloc_chunk_from_ptr(const void *ptr)
 		}
 
 		if (tc->flags & TALLOC_FLAG_FREE) {
-			talloc_log("talloc: double free error - first free may be at %s\n", tc->name);
-			talloc_abort_double_free();
+			talloc_log("talloc: access after free error - first free may be at %s\n", tc->name);
+			talloc_abort_access_after_free();
 			return NULL;
 		} else {
 			talloc_abort_unknown_value();
@@ -645,13 +645,28 @@ static inline int _talloc_free_internal(void *ptr, const char *location)
 		   final choice is the null context. */
 		void *child = TC_PTR_FROM_CHUNK(tc->child);
 		const void *new_parent = null_context;
+		struct talloc_chunk *old_parent = NULL;
 		if (unlikely(tc->child->refs)) {
 			struct talloc_chunk *p = talloc_parent_chunk(tc->child->refs);
 			if (p) new_parent = TC_PTR_FROM_CHUNK(p);
 		}
+		/* finding the parent here is potentially quite
+		   expensive, but the alternative, which is to change
+		   talloc to always have a valid tc->parent pointer,
+		   makes realloc more expensive where there are a
+		   large number of children.
+
+		   The reason we need the parent pointer here is that
+		   if _talloc_free_internal() fails due to references
+		   or a failing destructor we need to re-parent, but
+		   the free call can invalidate the prev pointer.
+		*/
+		if (new_parent == null_context && (tc->child->refs || tc->child->destructor)) {
+			old_parent = talloc_parent_chunk(ptr);
+		}
 		if (unlikely(_talloc_free_internal(child, location) == -1)) {
 			if (new_parent == null_context) {
-				struct talloc_chunk *p = talloc_parent_chunk(ptr);
+				struct talloc_chunk *p = old_parent;
 				if (p) new_parent = TC_PTR_FROM_CHUNK(p);
 			}
 			_talloc_steal_internal(new_parent, child);
