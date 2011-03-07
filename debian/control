@@ -4,9 +4,10 @@ Priority: optional
 Maintainer: Jelmer Vernooij <jelmer@debian.org>
 Uploaders: Christian Perrier <bubulle@debian.org>
 Homepage: http://talloc.samba.org/
-Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python, python-dev, python-support
+Build-Depends: debhelper (>= 7), docbook-xml, docbook-xsl, xsltproc, libpopt-dev, swig, python (>= 2.6.6-3), python-dev (>= 2.6.6-3)
 Standards-Version: 3.9.1
 Vcs-Bzr: http://bzr.debian.org/pkg-samba/talloc/unstable
+X-Python-Version: >= 2.4
 
 Package: libtalloc2
 Architecture: any
@@ -29,7 +30,6 @@ Description: hierarchical pool based memory allocator - development files
 Package: python-talloc
 Architecture: any
 Section: python
-XB-Python-Version: ${python:Versions}
 Provides: ${python:Provides}
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
 Description: hierarchical pool based memory allocator - Python bindings
