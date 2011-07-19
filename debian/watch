@@ -1,2 +1,2 @@
 version=3
-ftp://ftp.samba.org/pub/talloc/talloc-(.+).tar.gz
+http://ftp.samba.org/pub/talloc/ talloc-(.+).tar.gz
