@@ -12,13 +12,18 @@ LDFLAGS += -Wl,--as-needed
 
 DESTDIR=$(CURDIR)/debian/tmp
 
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+export PYTHON=$(pyversions -r)
+
 conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
+conf_args += --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
 
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
+	PYTHON="$(PYTHON)" CFLAGS="$(CFLAGS)" ./configure $(conf_args)
 	touch configure-stamp
 
 build: configure build-stamp
@@ -51,7 +56,7 @@ install: build
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
 	ar -rc libtalloc.a bin/default/talloc_*.o
-	cp libtalloc.a $(DESTDIR)/usr/lib
+	cp libtalloc.a $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)
 	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 
 # Build architecture-dependent files here.
