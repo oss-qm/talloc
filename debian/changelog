@@ -1,7 +1,7 @@
-talloc (2.0.5-2) UNRELEASED; urgency=low
+talloc (2.0.5-2) unstable; urgency=low
 
   * Switch to dh_python2.
-  * Add multi-arch support.
+  * Add multi-arch support to libtalloc1.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Tue, 26 Jul 2011 17:50:44 +0200
 

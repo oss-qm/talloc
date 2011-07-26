@@ -14,16 +14,17 @@ DESTDIR=$(CURDIR)/debian/tmp
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
-export PYTHON=$(pyversions -r)
-
 conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 conf_args += --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
 
+export PYTHON=$(shell which `pyversions -r`)
+export PYTHON_CONFIG=$(shell which `pyversions -r`-config)
+
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-	PYTHON="$(PYTHON)" CFLAGS="$(CFLAGS)" ./configure $(conf_args)
+	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
 	touch configure-stamp
 
 build: configure build-stamp

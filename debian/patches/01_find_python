@@ -1,0 +1,15 @@
+Description: Support PYTHON environment variable when looking for talloc.
+Author: Jelmer Vernooij <jelmer@debian.org>
+
+diff --git a/lib/talloc/wscript b/lib/talloc/wscript
+index c96c69c..d1f3087 100644
+--- a/wscript
++++ b/wscript
+@@ -57,6 +57,7 @@ def configure(conf):
+ 
+     if not conf.env.disable_python:
+         # also disable if we don't have the python libs installed
++        conf.find_program('python', var='PYTHON', mandatory=False)
+         conf.check_tool('python')
+         conf.check_python_version((2,4,2))
+         conf.SAMBA_CHECK_PYTHON_HEADERS(mandatory=False)
