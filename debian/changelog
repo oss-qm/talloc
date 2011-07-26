@@ -1,4 +1,4 @@
-talloc (2.0.5-2) UNRELEASED; urgency=low
+talloc (2.0.5-2) experimental; urgency=low
 
   * Switch to dh_python2.
   * Add multi-arch support to libtalloc1.
