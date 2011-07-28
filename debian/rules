@@ -21,67 +21,38 @@ conf_args += --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
 export PYTHON=$(shell which `pyversions -r`)
 export PYTHON_CONFIG=$(shell which `pyversions -r`-config)
 
-configure: configure-stamp
-configure-stamp:
-	dh_testdir
-	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
-	touch configure-stamp
+%:
+	dh $*
 
-build: configure build-stamp
-build-stamp:
-	dh_testdir
+override_dh_auto_configure:
+	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
+
+override_dh_auto_build:
 	$(MAKE) all
+
+override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	LD_LIBRARY_PATH=bin/shared ./bin/talloc_testsuite
 endif
-	touch build-stamp
 
 get-orig-source:
 	./debian/build-orig.sh
 
-clean:
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp configure-stamp
+override_dh_auto_clean:
 	[ ! -f Makefile ] || $(MAKE) distclean
 	rm -f buildtools/wafsamba/*.pyc
 	rm -rf buildtools/bin/.waf*
-	dh_clean
 
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
+override_dh_auto_install:
 	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
 	ar -rc libtalloc.a bin/default/talloc_*.o
 	cp libtalloc.a $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)
-	dh_install --list-missing --fail-missing --sourcedir=$(DESTDIR)
 
-# Build architecture-dependent files here.
-# Pass -a to all debhelper commands in this target to reduce clutter.
-binary-arch: DH_OPTIONS=-a
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installdocs
-	dh_installchangelogs
+override_dh_strip:
 	dh_strip -plibtalloc2 --dbg-package=libtalloc2-dbg
 	dh_strip -ppython-talloc --dbg-package=python-talloc-dbg
-	dh_link
-	dh_compress
-	dh_fixperms
+
+override_dh_makeshlibs:
 	dh_makeshlibs -- -c4
-	dh_python2
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary-indep:
-
-binary: binary-arch binary-indep
-.PHONY: build clean binary-arch binary install configure
