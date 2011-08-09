@@ -85,6 +85,14 @@ def build_dependencies(self):
         new_ldflags.extend(ldflags)
         self.ldflags       = new_ldflags
 
+        if getattr(self, 'allow_undefined_symbols', False) and self.env.undefined_ldflags:
+            for f in self.env.undefined_ldflags:
+                self.ldflags.remove(f)
+
+        if getattr(self, 'allow_undefined_symbols', False) and self.env.undefined_ignore_ldflags:
+            for f in self.env.undefined_ignore_ldflags:
+                self.ldflags.append(f)
+
         debug('deps: computed dependencies for target %s: uselib=%s uselib_local=%s add_objects=%s',
               self.sname, self.uselib, self.uselib_local, self.add_objects)
 
@@ -133,7 +141,7 @@ def build_includes(self):
 
     includes.extend(self.samba_includes_extended)
 
-    if 'EXTRA_INCLUDES' in bld.env:
+    if 'EXTRA_INCLUDES' in bld.env and getattr(self, 'global_include', True):
         includes.extend(bld.env['EXTRA_INCLUDES'])
 
     includes.append('#')
@@ -214,9 +222,11 @@ def add_init_functions(self):
     cflags = getattr(self, 'samba_cflags', [])[:]
 
     if modules == []:
-        cflags.append('-DSTATIC_%s_MODULES=%s' % (sname.replace('-','_'), sentinal))
+        sname = sname.replace('-','_')
+        sname = sname.replace('/','_')
+        cflags.append('-DSTATIC_%s_MODULES=%s' % (sname, sentinal))
         if sentinal == 'NULL':
-            cflags.append('-DSTATIC_%s_MODULES_PROTO' % sname.replace('-','_'))
+            cflags.append('-DSTATIC_%s_MODULES_PROTO' % sname)
         self.ccflags = cflags
         return
 
@@ -286,8 +296,7 @@ def check_duplicate_sources(bld, tgt_list):
             Logs.warn("WARNING: source %s is in more than one target: %s" % (s, subsystems[s].keys()))
         for tname in subsystems[s]:
             if len(subsystems[s][tname]) > 1:
-                Logs.error("ERROR: source %s is in more than one subsystem of target '%s': %s" % (s, tname, subsystems[s][tname]))
-                sys.exit(1)
+                raise Utils.WafError("ERROR: source %s is in more than one subsystem of target '%s': %s" % (s, tname, subsystems[s][tname]))
                 
     return ret
 
@@ -953,10 +962,11 @@ def show_object_duplicates(bld, tgt_list):
 # this provides a way to save our dependency calculations between runs
 savedeps_version = 3
 savedeps_inputs  = ['samba_deps', 'samba_includes', 'local_include', 'local_include_first', 'samba_cflags',
-                    'source', 'grouping_library', 'samba_ldflags']
+                    'source', 'grouping_library', 'samba_ldflags', 'allow_undefined_symbols',
+                    'use_global_deps', 'global_include' ]
 savedeps_outputs = ['uselib', 'uselib_local', 'add_objects', 'includes', 'ccflags', 'ldflags', 'samba_deps_extended']
 savedeps_outenv  = ['INC_PATHS']
-savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES', 'EXTRA_CFLAGS', 'EXTRA_LDFLAGS' ]
+savedeps_envvars = ['NONSHARED_BINARIES', 'GLOBAL_DEPENDENCIES', 'EXTRA_CFLAGS', 'EXTRA_LDFLAGS', 'EXTRA_INCLUDES' ]
 savedeps_caches  = ['GLOBAL_DEPENDENCIES', 'TARGET_TYPE', 'INIT_FUNCTIONS', 'SYSLIB_DEPS']
 savedeps_files   = ['buildtools/wafsamba/samba_deps.py']
 

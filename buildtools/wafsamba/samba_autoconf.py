@@ -80,7 +80,7 @@ def nolink(self):
 
 def CHECK_HEADER(conf, h, add_headers=False, lib=None):
     '''check for a header'''
-    if h in missing_headers:
+    if h in missing_headers and lib is None:
         return False
     d = h.upper().replace('/', '_')
     d = d.replace('.', '_')
@@ -463,21 +463,22 @@ Build.BuildContext.CONFIG_SET = CONFIG_SET
 Build.BuildContext.CONFIG_GET = CONFIG_GET
 
 
-def library_flags(conf, libs):
+def library_flags(self, libs):
     '''work out flags from pkg_config'''
     ccflags = []
     ldflags = []
     for lib in TO_LIST(libs):
-        inc_path = getattr(conf.env, 'CPPPATH_%s' % lib.upper(), [])
-        lib_path = getattr(conf.env, 'LIBPATH_%s' % lib.upper(), [])
+        inc_path = getattr(self.env, 'CPPPATH_%s' % lib.upper(), [])
+        lib_path = getattr(self.env, 'LIBPATH_%s' % lib.upper(), [])
         ccflags.extend(['-I%s' % i for i in inc_path])
         ldflags.extend(['-L%s' % l for l in lib_path])
-        extra_ccflags = TO_LIST(getattr(conf.env, 'CCFLAGS_%s' % lib.upper(), []))
-        extra_ldflags = TO_LIST(getattr(conf.env, 'LDFLAGS_%s' % lib.upper(), []))
+        extra_ccflags = TO_LIST(getattr(self.env, 'CCFLAGS_%s' % lib.upper(), []))
+        extra_ldflags = TO_LIST(getattr(self.env, 'LDFLAGS_%s' % lib.upper(), []))
         ccflags.extend(extra_ccflags)
         ldflags.extend(extra_ldflags)
-    if 'EXTRA_LDFLAGS' in conf.env:
-        ldflags.extend(conf.env['EXTRA_LDFLAGS'])
+    if 'EXTRA_LDFLAGS' in self.env:
+        ldflags.extend(self.env['EXTRA_LDFLAGS'])
+
     ccflags = unique_list(ccflags)
     ldflags = unique_list(ldflags)
     return (ccflags, ldflags)
@@ -596,8 +597,10 @@ def SAMBA_CONFIG_H(conf, path=None):
 
     if Options.options.developer:
         # we add these here to ensure that -Wstrict-prototypes is not set during configure
-        conf.ADD_CFLAGS('-Wall -g -Wshadow -Wstrict-prototypes -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Werror-implicit-function-declaration -Wformat=2 -Wno-format-y2k -Wmissing-prototypes',
+        conf.ADD_CFLAGS('-Wall -g -Wshadow -Wstrict-prototypes -Wpointer-arith -Wcast-align -Wwrite-strings -Werror-implicit-function-declaration -Wformat=2 -Wno-format-y2k -Wmissing-prototypes -fno-common',
                         testflags=True)
+        if os.getenv('TOPLEVEL_BUILD'):
+            conf.ADD_CFLAGS('-Wcast-qual', testflags=True)
         conf.env.DEVELOPER_MODE = True
 
     if Options.options.picky_developer:
@@ -644,6 +647,8 @@ def ADD_CFLAGS(conf, flags, testflags=False):
 def ADD_LDFLAGS(conf, flags, testflags=False):
     '''add some LDFLAGS to the command line
        optionally set testflags to ensure all the flags work
+
+       this will return the flags that are added, if any
     '''
     if testflags:
         ok_flags=[]
@@ -654,7 +659,7 @@ def ADD_LDFLAGS(conf, flags, testflags=False):
     if not 'EXTRA_LDFLAGS' in conf.env:
         conf.env['EXTRA_LDFLAGS'] = []
     conf.env['EXTRA_LDFLAGS'].extend(TO_LIST(flags))
-
+    return flags
 
 
 @conf

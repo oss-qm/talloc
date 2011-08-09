@@ -6,13 +6,11 @@ from samba_utils import *
 
 def PRIVATE_NAME(bld, name, private_extension, private_library):
     '''possibly rename a library to include a bundled extension'''
-    if bld.env.DISABLE_SHARED or not private_extension:
-        return name
-    if name in bld.env.PRIVATE_EXTENSION_EXCEPTION and not private_library:
-        return name
-    extension = getattr(bld.env, 'PRIVATE_EXTENSION', '')
-    if extension:
-        return name + '-' + extension
+
+    # we now use the same private name for libraries as the public name.
+    # see http://git.samba.org/?p=tridge/junkcode.git;a=tree;f=shlib for a
+    # demonstration that this is the right thing to do
+    # also see http://lists.samba.org/archive/samba-technical/2011-January/075816.html
     return name
 
 
@@ -124,10 +122,14 @@ def CHECK_BUNDLED_SYSTEM(conf, libname, minversion='0.0.0',
 
     minversion = minimum_library_version(conf, libname, minversion)
 
+    msg = 'Checking for system %s' % libname
+    if minversion != '0.0.0':
+        msg += ' >= %s' % minversion
+
     # try pkgconfig first
     if (conf.check_cfg(package=libname,
                       args='"%s >= %s" --cflags --libs' % (libname, minversion),
-                      msg='Checking for system %s >= %s' % (libname, minversion)) and
+                      msg=msg) and
         check_functions_headers()):
         conf.SET_TARGET_TYPE(libname, 'SYSLIB')
         conf.env[found] = True

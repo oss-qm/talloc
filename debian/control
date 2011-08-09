@@ -20,6 +20,7 @@ Description: hierarchical pool based memory allocator
  reference counting to determine when memory should be freed.
 
 Package: libtalloc2-dbg
+Pre-Depends: ${misc:Pre-Depends}
 Section: debug
 Priority: extra
 Depends: libtalloc2 (= ${binary:Version}), ${misc:Depends}
@@ -55,6 +56,7 @@ Description: hierarchical pool based memory allocator - Python bindings
 
 Package: python-talloc-dbg
 Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
 Section: debug
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-talloc (= ${binary:Version})
 Recommends: python-dbg, libtalloc2-dbg

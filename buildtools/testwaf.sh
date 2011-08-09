@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 set -x
@@ -11,7 +11,7 @@ PREFIX=$HOME/testprefix
 if [ $# -gt 0 ]; then
     tests="$*"
 else
-    tests="lib/replace lib/talloc lib/tevent lib/tdb source4/lib/ldb"
+    tests="lib/replace lib/talloc lib/tevent lib/tdb lib/ldb"
 fi
 
 echo "testing in dirs $tests"
@@ -21,14 +21,13 @@ for d in $tests; do
     pushd $d
     rm -rf bin
     type waf
-    ./autogen-waf.sh
     waf dist
     ./configure -C --enable-developer --prefix=$PREFIX
     time make
     make install
     make distcheck
     case $d in
-	"source4/lib/ldb")
+	"lib/ldb")
 	    ldd bin/ldbadd
 	    ;;
 	"lib/replace")
