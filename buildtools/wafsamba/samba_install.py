@@ -124,8 +124,12 @@ def install_library(self):
         install_link = None
         inst_name    = bld.make_libname(t.target)
 
-    if t.env.SONAME_ST and install_link:
-        t.env.append_value('LINKFLAGS', t.env.SONAME_ST % install_link)
+    if t.env.SONAME_ST:
+        # ensure we get the right names in the library
+        if install_link:
+            t.env.append_value('LINKFLAGS', t.env.SONAME_ST % install_link)
+        else:
+            t.env.append_value('LINKFLAGS', t.env.SONAME_ST % install_name)
         t.env.SONAME_ST = ''
 
     # tell waf to install the library
@@ -133,9 +137,9 @@ def install_library(self):
                    os.path.join(self.path.abspath(bld.env), inst_name))
     if install_link and install_link != install_name:
         # and the symlink if needed
-        bld.symlink_as(os.path.join(install_path, install_link), install_name)
+        bld.symlink_as(os.path.join(install_path, install_link), os.path.basename(install_name))
     if dev_link:
-        bld.symlink_as(os.path.join(install_path, dev_link), install_name)
+        bld.symlink_as(os.path.join(install_path, dev_link), os.path.basename(install_name))
 
 
 @feature('cshlib')
@@ -182,7 +186,7 @@ def symlink_lib(self):
 
     link_target = getattr(self, 'link_name', '')
     if link_target == '':
-        basename = self.bld.make_libname(self.target, version=soext)
+        basename = os.path.basename(self.bld.make_libname(self.target, version=soext))
         if getattr(self, "private_library", False):
             link_target = '%s/private/%s' % (LIB_PATH, basename)
         else:
@@ -211,6 +215,8 @@ def symlink_bin(self):
         return
 
     blddir = os.path.dirname(self.bld.srcnode.abspath(self.bld.env))
+    if not self.link_task.outputs or not self.link_task.outputs[0]:
+        raise Utils.WafError('no outputs found for %s in symlink_bin' % self.name)
     binpath = self.link_task.outputs[0].abspath(self.env)
     bldpath = os.path.join(self.bld.env.BUILD_DIRECTORY, self.link_task.outputs[0].name)
 

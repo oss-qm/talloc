@@ -121,6 +121,10 @@ def set_options(opt):
                   help=("check symbols in object files against project rules"),
                   action='store_true', dest='SYMBOLCHECK', default=False)
 
+    gr.add_option('--why-needed',
+                  help=("TARGET:DEPENDENCY check why TARGET needs DEPENDENCY"),
+                  action='store', type='str', dest='WHYNEEDED', default=None)
+
     gr.add_option('--show-duplicates',
                   help=("Show objects which are included in multiple binaries or libraries"),
                   action='store_true', dest='SHOW_DUPLICATES', default=False)
@@ -277,7 +281,7 @@ def configure(conf):
         conf.env.RPATH_ON_INSTALL = (conf.env.RPATH_ON_BUILD and
                                      not Options.options.disable_rpath_install)
         if not conf.env.PRIVATELIBDIR:
-            conf.env.PRIVATELIBDIR = '${PREFIX}/lib/%s' % Utils.g_module.APPNAME
+            conf.env.PRIVATELIBDIR = '%s/%s' % (conf.env.LIBDIR, Utils.g_module.APPNAME)
         conf.env.RPATH_ON_INSTALL_PRIVATE = (
             not Options.options.disable_rpath_private_install)
     else:

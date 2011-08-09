@@ -37,7 +37,7 @@ def configure(conf):
         conf.DEFINE('_OSF_SOURCE', 1, add_to_cflags=True)
         conf.DEFINE('_XOPEN_SOURCE', 600, add_to_cflags=True)
 
-    conf.CHECK_HEADERS('crypt.h locale.h acl/libacl.h compat.h')
+    conf.CHECK_HEADERS('linux/types.h crypt.h locale.h acl/libacl.h compat.h')
     conf.CHECK_HEADERS('acl/libacl.h attr/xattr.h compat.h ctype.h dustat.h')
     conf.CHECK_HEADERS('fcntl.h fnmatch.h glob.h history.h krb5.h langinfo.h')
     conf.CHECK_HEADERS('libaio.h locale.h ndir.h pwd.h')
@@ -202,7 +202,24 @@ def configure(conf):
         # some systems are missing the declaration
         conf.CHECK_DECLS('fdatasync')
 
-    conf.CHECK_FUNCS_IN('clock_gettime', 'rt', checklibc=True)
+    if conf.CHECK_FUNCS_IN('clock_gettime', 'rt', checklibc=True):
+        for c in ['CLOCK_MONOTONIC', 'CLOCK_PROCESS_CPUTIME_ID', 'CLOCK_REALTIME']:
+            conf.CHECK_CODE('''
+			    #if TIME_WITH_SYS_TIME
+			    # include <sys/time.h>
+			    # include <time.h>
+			    #else
+			    # if HAVE_SYS_TIME_H
+			    #  include <sys/time.h>
+			    # else
+			    #  include <time.h>
+			    # endif
+			    #endif
+			    clockid_t clk = %s''' % c,
+			    'HAVE_%s' % c,
+			    msg='Checking whether the clock_gettime clock ID %s is available' % c)
+
+    conf.CHECK_TYPE('struct timespec', headers='sys/time.h time.h')
 
     # these headers need to be tested as a group on freebsd
     conf.CHECK_HEADERS(headers='sys/socket.h net/if.h', together=True)
@@ -238,6 +255,9 @@ def configure(conf):
     if conf.CONFIG_SET('HAVE_EPOLL_CREATE') and conf.CONFIG_SET('HAVE_SYS_EPOLL_H'):
         conf.DEFINE('HAVE_EPOLL', 1)
 
+    conf.CHECK_HEADERS('poll.h')
+    conf.CHECK_FUNCS('poll')
+
     if not conf.CHECK_CODE('''#define LIBREPLACE_CONFIGURE_TEST_STRPTIME
                            #include "test/strptime.c"''',
                            define='HAVE_STRPTIME',
@@ -263,14 +283,6 @@ def configure(conf):
                         define_ret = True,
                         define = 'REPLACE_STRPTIME',
                         )
-
-    if conf.CONFIG_SET('HAVE_KRB5_H'):
-        # Check for KRB5_DEPRECATED handling
-        conf.CHECK_CODE('''#define KRB5_DEPRECATED 1
-#include <krb5.h>''',
-                        'HAVE_KRB5_DEPRECATED_WITH_IDENTIFIER', addmain=False,
-                        link=False,
-                        msg="Checking for KRB5_DEPRECATED define taking an identifier")
 
     conf.CHECK_CODE('gettimeofday(NULL, NULL)', 'HAVE_GETTIMEOFDAY_TZ', execute=False)
 
@@ -403,6 +415,7 @@ def build(bld):
     if bld.CONFIG_SET('REPLACE_GETPASS'):        REPLACE_SOURCE += ' getpass.c'
     if not bld.CONFIG_SET('HAVE_CRYPT'):         REPLACE_SOURCE += ' crypt.c'
     if not bld.CONFIG_SET('HAVE_DLOPEN'):        REPLACE_SOURCE += ' dlfcn.c'
+    if not bld.CONFIG_SET('HAVE_POLL'):          REPLACE_SOURCE += ' poll.c'
 
     if not bld.CONFIG_SET('HAVE_SOCKETPAIR'):    REPLACE_SOURCE += ' socketpair.c'
     if not bld.CONFIG_SET('HAVE_CONNECT'):       REPLACE_SOURCE += ' socket.c'

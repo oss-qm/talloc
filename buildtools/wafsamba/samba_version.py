@@ -1,13 +1,18 @@
 import os
 import Utils
 import samba_utils
+import sys
 
 def bzr_version_summary(path):
     try:
-        from bzrlib import branch, osutils, workingtree
+        import bzrlib
     except ImportError:
         return ("BZR-UNKNOWN", {})
 
+    import bzrlib.ui
+    bzrlib.ui.ui_factory = bzrlib.ui.make_ui_for_terminal(
+        sys.stdin, sys.stdout, sys.stderr)
+    from bzrlib import branch, osutils, workingtree
     from bzrlib.plugin import load_plugins
     load_plugins()
 
@@ -32,7 +37,11 @@ def bzr_version_summary(path):
         ret = "BZR-%d" % revno
     else:
         store = get_object_store(b.repository)
-        full_rev = store._lookup_revision_sha1(revid)
+        store.lock_read()
+        try:
+            full_rev = store._lookup_revision_sha1(revid)
+        finally:
+            store.unlock()
         fields["GIT_COMMIT_ABBREV"] = full_rev[:7]
         fields["GIT_COMMIT_FULLREV"] = full_rev
         ret = "GIT-" + fields["GIT_COMMIT_ABBREV"]
@@ -47,6 +56,10 @@ def bzr_version_summary(path):
 
 def git_version_summary(path, env=None):
     # Get version from GIT
+    if not 'GIT' in env and os.path.exists("/usr/bin/git"):
+        # this is useful when doing make dist without configuring
+        env.GIT = "/usr/bin/git"
+
     if not 'GIT' in env:
         return ("GIT-UNKNOWN", {})
 
@@ -69,7 +82,7 @@ def git_version_summary(path, env=None):
     ret = "GIT-" + fields["GIT_COMMIT_ABBREV"]
 
     if env.GIT_LOCAL_CHANGES:
-        clean = Utils.cmd_output('git diff HEAD | wc -l', silent=True).strip()
+        clean = Utils.cmd_output('%s diff HEAD | wc -l' % env.GIT, silent=True).strip()
         if clean == "0":
             fields["COMMIT_IS_CLEAN"] = 1
         else:
@@ -81,7 +94,7 @@ def git_version_summary(path, env=None):
 
 class SambaVersion(object):
 
-    def __init__(self, version_dict, path, env=None):
+    def __init__(self, version_dict, path, env=None, is_install=True):
         '''Determine the version number of samba
 
 See VERSION for the format.  Entries on that file are 
@@ -143,7 +156,10 @@ also accepted as dictionary entries here
             SAMBA_VERSION_STRING += ("rc%u" % self.RC_RELEASE)
 
         if self.IS_SNAPSHOT:
-            if os.path.exists(os.path.join(path, ".git")):
+            if not is_install:
+                suffix = "DEVELOPERBUILD"
+                self.vcs_fields = {}
+            elif os.path.exists(os.path.join(path, ".git")):
                 suffix, self.vcs_fields = git_version_summary(path, env=env)
             elif os.path.exists(os.path.join(path, ".bzr")):
                 suffix, self.vcs_fields = bzr_version_summary(path)
@@ -225,7 +241,7 @@ also accepted as dictionary entries here
         return string
 
 
-def samba_version_file(version_file, path, env=None):
+def samba_version_file(version_file, path, env=None, is_install=True):
     '''Parse the version information from a VERSION file'''
 
     f = open(version_file, 'r')
@@ -245,16 +261,16 @@ def samba_version_file(version_file, path, env=None):
             print("Failed to parse line %s from %s" % (line, version_file))
             raise
 
-    return SambaVersion(version_dict, path, env=env)
+    return SambaVersion(version_dict, path, env=env, is_install=is_install)
 
 
 
-def load_version(env=None):
+def load_version(env=None, is_install=True):
     '''load samba versions either from ./VERSION or git
     return a version object for detailed breakdown'''
     if not env:
         env = samba_utils.LOAD_ENVIRONMENT()
 
-    version = samba_version_file("./VERSION", "..", env)
+    version = samba_version_file("./VERSION", ".", env, is_install=is_install)
     Utils.g_module.VERSION = version.STRING
     return version

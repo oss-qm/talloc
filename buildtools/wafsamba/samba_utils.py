@@ -308,7 +308,12 @@ def recursive_dirlist(dir, relbase, pattern=None):
 
 def mkdir_p(dir):
     '''like mkdir -p'''
-    if not dir or os.path.isdir(dir):
+    if not dir:
+        return
+    if dir.endswith("/"):
+        mkdir_p(dir[:-1])
+        return
+    if os.path.isdir(dir):
         return
     mkdir_p(os.path.dirname(dir))
     os.mkdir(dir)
@@ -468,6 +473,8 @@ def CHECK_MAKEFLAGS(bld):
     if not 'WAF_MAKE' in os.environ:
         return
     makeflags = os.environ.get('MAKEFLAGS')
+    if makeflags is None:
+        return
     jobs_set = False
     # we need to use shlex.split to cope with the escaping of spaces
     # in makeflags
@@ -560,6 +567,13 @@ def map_shlib_extension(ctx, name, python=False):
     return root1+ext2
 Build.BuildContext.map_shlib_extension = map_shlib_extension
 
+def apply_pattern(filename, pattern):
+    '''apply a filename pattern to a filename that may have a directory component'''
+    dirname = os.path.dirname(filename)
+    if not dirname:
+        return pattern % filename
+    basename = os.path.basename(filename)
+    return os.path.join(dirname, pattern % basename)
 
 def make_libname(ctx, name, nolibprefix=False, version=None, python=False):
     """make a library filename
@@ -569,9 +583,9 @@ def make_libname(ctx, name, nolibprefix=False, version=None, python=False):
               python     : if we should use python module name conventions"""
 
     if python:
-        libname = ctx.env.pyext_PATTERN % name
+        libname = apply_pattern(name, ctx.env.pyext_PATTERN)
     else:
-        libname = ctx.env.shlib_PATTERN % name
+        libname = apply_pattern(name, ctx.env.shlib_PATTERN)
     if nolibprefix and libname[0:3] == 'lib':
         libname = libname[3:]
     if version:
