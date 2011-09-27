@@ -18,14 +18,17 @@ conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libr
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 conf_args += --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
 
-export PYTHON=$(shell which `pyversions -r`)
-export PYTHON_CONFIG=$(shell which `pyversions -r`-config)
+export PYTHON="$(shell which `pyversions -d`)"
+export PYTHON_CONFIG=$(PYTHON)-config
 
 %:
-	dh $*
+	dh $* --with python2 
+
+override_dh_python2:
+	dh_python2 --no-guessing-versions
 
 override_dh_auto_configure:
-	CFLAGS="$(CFLAGS)" ./configure $(conf_args)
+	PYTHON="$(PYTHON)" PYTHON_CONFIG="$(PYTHON_CONFIG)" CFLAGS="$(CFLAGS)" ./configure $(conf_args)
 
 override_dh_auto_build:
 	$(MAKE) all
