@@ -1,3 +1,9 @@
+talloc (2.0.7-3) unstable; urgency=low
+
+  * Link with --as-needed.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Wed, 28 Sep 2011 11:06:58 +0200
+
 talloc (2.0.7-2) unstable; urgency=low
 
   * Build against default system Python and explicitly use dh_python2.
