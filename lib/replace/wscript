@@ -29,6 +29,7 @@ def configure(conf):
 
     conf.env.standalone_replace = conf.IN_LAUNCH_DIR()
 
+    conf.DEFINE('HAVE_LIBREPLACE', 1)
     conf.DEFINE('LIBREPLACE_NETWORK_CHECKS', 1)
 
     # on Tru64 certain features are only available with _OSF_SOURCE set to 1
@@ -160,14 +161,20 @@ def configure(conf):
 
     conf.CHECK_FUNCS('shl_load shl_unload shl_findsym')
     conf.CHECK_FUNCS('pipe strftime srandom random srand rand usleep setbuffer')
-    conf.CHECK_FUNCS('lstat getpgrp utime utimes seteuid setresuid setegid')
-    conf.CHECK_FUNCS('setresgid chroot strerror vsyslog setlinebuf mktime')
-    conf.CHECK_FUNCS('ftruncate chsize rename waitpid wait4 strlcpy strlcat')
+    conf.CHECK_FUNCS('lstat getpgrp utime utimes seteuid setreuid setresuid setegid')
+    conf.CHECK_FUNCS('setregid setresgid chroot strerror vsyslog setlinebuf mktime')
+    conf.CHECK_FUNCS('ftruncate chsize rename waitpid wait4')
     conf.CHECK_FUNCS('initgroups pread pwrite strndup strcasestr')
     conf.CHECK_FUNCS('strtok_r mkdtemp dup2 dprintf vdprintf isatty chown lchown')
     conf.CHECK_FUNCS('link readlink symlink realpath snprintf vsnprintf')
     conf.CHECK_FUNCS('asprintf vasprintf setenv unsetenv strnlen strtoull __strtoull')
     conf.CHECK_FUNCS('strtouq strtoll __strtoll strtoq')
+
+    # libbsd on some platforms provides strlcpy and strlcat
+    if not conf.CHECK_FUNCS('strlcpy strlcat'):
+        conf.CHECK_FUNCS_IN('strlcpy strlcat', 'bsd', headers='bsd/string.h',
+                checklibc=True)
+
     #Some OS (ie. freebsd) return EINVAL if the convertion could not be done, it's not what we expect
     #Let's detect those cases
     if conf.CONFIG_SET('HAVE_STRTOLL'):
@@ -205,19 +212,19 @@ def configure(conf):
     if conf.CHECK_FUNCS_IN('clock_gettime', 'rt', checklibc=True):
         for c in ['CLOCK_MONOTONIC', 'CLOCK_PROCESS_CPUTIME_ID', 'CLOCK_REALTIME']:
             conf.CHECK_CODE('''
-			    #if TIME_WITH_SYS_TIME
-			    # include <sys/time.h>
-			    # include <time.h>
-			    #else
-			    # if HAVE_SYS_TIME_H
-			    #  include <sys/time.h>
-			    # else
-			    #  include <time.h>
-			    # endif
-			    #endif
-			    clockid_t clk = %s''' % c,
-			    'HAVE_%s' % c,
-			    msg='Checking whether the clock_gettime clock ID %s is available' % c)
+                #if TIME_WITH_SYS_TIME
+                # include <sys/time.h>
+                # include <time.h>
+                #else
+                # if HAVE_SYS_TIME_H
+                #  include <sys/time.h>
+                # else
+                #  include <time.h>
+                # endif
+                #endif
+                clockid_t clk = %s''' % c,
+                'HAVE_%s' % c,
+                msg='Checking whether the clock_gettime clock ID %s is available' % c)
 
     conf.CHECK_TYPE('struct timespec', headers='sys/time.h time.h')
 
@@ -394,19 +401,38 @@ def configure(conf):
     conf.SAMBA_CONFIG_H()
 
 
+REPLACEMENT_FUNCTIONS = {
+    'replace.c': ['ftruncate', 'strlcpy', 'strlcat', 'mktime', 'initgroups',
+                  'memmove', 'strdup', 'setlinebuf', 'vsyslog', 'strnlen',
+                  'strndup', 'waitpid', 'seteuid', 'setegid', 'chroot',
+                  'mkstemp', 'mkdtemp', 'pread', 'pwrite', 'strcasestr',
+                  'strtok_r', 'strtoll', 'strtoull', 'setenv', 'unsetenv',
+                  'utime', 'utimes', 'dup2', 'chown', 'link', 'readlink',
+                  'symlink', 'lchown', 'realpath', 'memmem', 'vdprintf',
+                  'dprintf', 'get_current_dir_name',
+                  'strerror_r', 'clock_gettime'],
+    'timegm.c': ['timegm'],
+    'snprintf.c': ['snprintf'],
+    }
+
+
 def build(bld):
     bld.RECURSE('buildtools/wafsamba')
 
-    REPLACE_HOSTCC_SOURCE = 'replace.c snprintf.c'
+    REPLACE_HOSTCC_SOURCE = ''
 
     if bld.CONFIG_SET('REPLACE_STRPTIME'):       REPLACE_HOSTCC_SOURCE += ' strptime.c'
-    if not bld.CONFIG_SET('HAVE_TIMEGM'):        REPLACE_HOSTCC_SOURCE += ' timegm.c'
+    for filename, functions in REPLACEMENT_FUNCTIONS.iteritems():
+        for function in functions:
+            if not bld.CONFIG_SET('HAVE_%s' % function.upper()):
+                REPLACE_HOSTCC_SOURCE += ' %s' % filename
+                break
 
     bld.SAMBA_SUBSYSTEM('LIBREPLACE_HOSTCC',
         REPLACE_HOSTCC_SOURCE,
         use_hostcc=True,
         use_global_deps=False,
-        cflags='-DSOCKET_WRAPPER_DISABLE=1 -DNSS_WRAPPER_DISABLE=1 -D_SAMBA_HOSTCC_',
+        cflags='-DSOCKET_WRAPPER_DISABLE=1 -DNSS_WRAPPER_DISABLE=1 -DUID_WRAPPER_DISABLE=1 -D_SAMBA_HOSTCC_',
         group='compiler_libraries'
     )
 
@@ -426,6 +452,9 @@ def build(bld):
     if not bld.CONFIG_SET('HAVE_INET_NTOP'):     REPLACE_SOURCE += ' inet_ntop.c'
     if not bld.CONFIG_SET('HAVE_INET_PTON'):     REPLACE_SOURCE += ' inet_pton.c'
 
+    extra_libs = ''
+    if bld.CONFIG_SET('HAVE_LIBBSD'): extra_libs += ' bsd'
+
     bld.SAMBA_LIBRARY('replace',
                       source=REPLACE_SOURCE,
                       group='base_libraries',
@@ -435,7 +464,7 @@ def build(bld):
                       # at the moment:
                       # hide_symbols=bld.BUILTIN_LIBRARY('replace'),
                       private_library=True,
-                      deps='crypt dl nsl socket rt')
+                      deps='crypt dl nsl socket rt' + extra_libs)
 
     bld.SAMBA_SUBSYSTEM('replace-test',
                       source='''test/testsuite.c test/strptime.c

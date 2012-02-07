@@ -67,6 +67,7 @@
 #include <compat.h>
 #endif
 
+#if !defined(getpass)
 #ifdef REPLACE_GETPASS
 #if defined(REPLACE_GETPASS_BY_GETPASSPHRASE)
 #define getpass(prompt) getpassphrase(prompt)
@@ -75,6 +76,7 @@
 char *rep_getpass(const char *prompt);
 #endif
 #endif
+#endif 
 
 #ifndef NGROUPS_MAX
 #define NGROUPS_MAX 32 /* Guess... */
@@ -108,5 +110,16 @@ char *rep_getpass(const char *prompt);
 #include "../nss_wrapper/nss_wrapper.h"
 #endif /* NSS_WRAPPER_DISABLE */
 #endif /* NSS_WRAPPER */
+
+#ifdef UID_WRAPPER
+# ifndef UID_WRAPPER_DISABLE
+#  ifndef UID_WRAPPER_NOT_REPLACE
+#   define UID_WRAPPER_REPLACE
+#  endif /* UID_WRAPPER_NOT_REPLACE */
+#  include "../uid_wrapper/uid_wrapper.h"
+# endif /* UID_WRAPPER_DISABLE */
+#else /* UID_WRAPPER */
+# define uwrap_enabled() 0
+#endif /* UID_WRAPPER */
 
 #endif
