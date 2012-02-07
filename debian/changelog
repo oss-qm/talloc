@@ -1,4 +1,4 @@
-talloc (2.0.7+git20120207-1) UNRELEASED; urgency=low
+talloc (2.0.7+git20120207-1) unstable; urgency=low
 
   * New upstream snapshot.
    + Unpacks waf source code. Closes: #654508

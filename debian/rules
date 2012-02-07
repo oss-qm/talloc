@@ -38,13 +38,14 @@ ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	LD_LIBRARY_PATH=bin/shared ./bin/talloc_testsuite
 endif
 
-get-orig-source:
+get-packaged-orig-source:
 	./debian/build-orig.sh
 
 override_dh_auto_clean:
 	[ ! -f Makefile ] || $(MAKE) distclean
-	rm -f buildtools/wafsamba/*.pyc
-	rm -rf buildtools/bin/.waf*
+	rm -f buildtools/wafsamba/*.pyc \
+		buildtools/wafadmin/*.pyc \
+		buildtools/wafadmin/Tools/*.pyc
 
 override_dh_auto_install:
 	mkdir -p $(DESTDIR)`swig -swiglib`
