@@ -1,3 +1,10 @@
+talloc (2.0.7+git20120207-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot.
+   + Unpacks waf source code. Closes: #654508
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 07 Feb 2012 15:46:18 +0100
+
 talloc (2.0.7-3) unstable; urgency=low
 
   * Link with --as-needed.

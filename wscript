@@ -44,10 +44,10 @@ def configure(conf):
     conf.env.disable_python = getattr(Options.options, 'disable_python', False)
 
     if not conf.env.standalone_talloc:
-        if conf.CHECK_BUNDLED_SYSTEM('talloc', minversion=VERSION,
+        if conf.CHECK_BUNDLED_SYSTEM_PKG('talloc', minversion=VERSION,
                                      implied_deps='replace'):
             conf.define('USING_SYSTEM_TALLOC', 1)
-        if conf.CHECK_BUNDLED_SYSTEM('pytalloc-util', minversion=VERSION,
+        if conf.CHECK_BUNDLED_SYSTEM_PKG('pytalloc-util', minversion=VERSION,
                                      implied_deps='talloc replace'):
             conf.define('USING_SYSTEM_PYTALLOC_UTIL', 1)
 
@@ -67,6 +67,8 @@ def configure(conf):
 
     conf.SAMBA_CONFIG_H()
 
+    conf.SAMBA_CHECK_UNDEFINED_SYMBOL_FLAGS()
+
 
 def build(bld):
     bld.RECURSE('lib/replace')
@@ -84,6 +86,12 @@ def build(bld):
                           pc_files=[],
                           public_headers=[],
                           enabled=bld.env.TALLOC_COMPAT1)
+
+        bld.SAMBA_BINARY('talloc_testsuite',
+                         'testsuite_main.c testsuite.c',
+                         deps='talloc',
+                         install=False)
+
     else:
         private_library = True
 
@@ -106,7 +114,7 @@ def build(bld):
         bld.SAMBA_LIBRARY('pytalloc-util',
             source='pytalloc_util.c',
             public_deps='talloc',
-            pyext=True,
+            pyembed=True,
             vnum=VERSION,
             hide_symbols=True,
             abi_directory='ABI',
@@ -120,14 +128,6 @@ def build(bld):
                          deps='talloc pytalloc-util',
                          enabled=True,
                          realname='talloc.so')
-
-    if not getattr(bld.env, '_SAMBA_BUILD_', 0) == 4:
-        # s4 already has the talloc testsuite builtin to smbtorture
-        bld.SAMBA_BINARY('talloc_testsuite',
-                         'testsuite_main.c testsuite.c',
-                         deps='talloc',
-                         install=False)
-
 
 def test(ctx):
     '''run talloc testsuite'''

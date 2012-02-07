@@ -104,6 +104,10 @@
 # define PRIu64		__PRI64_PREFIX "u"
 #endif
 
+#ifdef HAVE_BSD_STRING_H
+#include <bsd/string.h>
+#endif
+
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
@@ -800,6 +804,17 @@ int fdatasync(int );
 #ifndef HAVE_POLL
 #define poll rep_poll
 /* prototype is in "system/network.h" */
+#endif
+
+#if !defined(getpass)
+#ifdef REPLACE_GETPASS
+#if defined(REPLACE_GETPASS_BY_GETPASSPHRASE)
+#define getpass(prompt) getpassphrase(prompt)
+#else
+#define getpass(prompt) rep_getpass(prompt)
+char *rep_getpass(const char *prompt);
+#endif
+#endif
 #endif
 
 #endif /* _LIBREPLACE_REPLACE_H */

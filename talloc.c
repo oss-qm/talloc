@@ -1039,11 +1039,11 @@ static inline int talloc_unreference(const void *context, const void *ptr)
 
 /*
   remove a specific parent context from a pointer. This is a more
-  controlled varient of talloc_free()
+  controlled variant of talloc_free()
 */
 _PUBLIC_ int talloc_unlink(const void *context, void *ptr)
 {
-	struct talloc_chunk *tc_p, *new_p;
+	struct talloc_chunk *tc_p, *new_p, *tc_c;
 	void *new_parent;
 
 	if (ptr == NULL) {
@@ -1058,14 +1058,13 @@ _PUBLIC_ int talloc_unlink(const void *context, void *ptr)
 		return 0;
 	}
 
-	if (context == NULL) {
-		if (talloc_parent_chunk(ptr) != NULL) {
-			return -1;
-		}
+	if (context != NULL) {
+		tc_c = talloc_chunk_from_ptr(context);
 	} else {
-		if (talloc_chunk_from_ptr(context) != talloc_parent_chunk(ptr)) {
-			return -1;
-		}
+		tc_c = NULL;
+	}
+	if (tc_c != talloc_parent_chunk(ptr)) {
+		return -1;
 	}
 	
 	tc_p = talloc_chunk_from_ptr(ptr);
@@ -1176,7 +1175,7 @@ _PUBLIC_ void *talloc_check_name(const void *ptr, const char *name)
 	return NULL;
 }
 
-static void talloc_abort_type_missmatch(const char *location,
+static void talloc_abort_type_mismatch(const char *location,
 					const char *name,
 					const char *expected)
 {
@@ -1199,7 +1198,7 @@ _PUBLIC_ void *_talloc_get_type_abort(const void *ptr, const char *name, const c
 	const char *pname;
 
 	if (unlikely(ptr == NULL)) {
-		talloc_abort_type_missmatch(location, NULL, name);
+		talloc_abort_type_mismatch(location, NULL, name);
 		return NULL;
 	}
 
@@ -1208,7 +1207,7 @@ _PUBLIC_ void *_talloc_get_type_abort(const void *ptr, const char *name, const c
 		return discard_const_p(void, ptr);
 	}
 
-	talloc_abort_type_missmatch(location, pname, name);
+	talloc_abort_type_mismatch(location, pname, name);
 	return NULL;
 }
 

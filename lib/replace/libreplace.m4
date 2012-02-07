@@ -71,6 +71,8 @@ AC_CHECK_HEADERS(setjmp.h utime.h)
 LIBREPLACE_PROVIDE_HEADER([stdint.h])
 LIBREPLACE_PROVIDE_HEADER([stdbool.h])
 
+AC_DEFINE(HAVE_LIBREPLACE, 1, [We have libreplace])
+
 AC_CHECK_TYPE(bool, 
 [AC_DEFINE(HAVE_BOOL, 1, [Whether the bool type is available])],,
 [
@@ -113,7 +115,8 @@ AC_CHECK_HEADERS(sys/mount.h mntent.h)
 AC_CHECK_HEADERS(stropts.h)
 AC_CHECK_HEADERS(unix.h)
 
-AC_CHECK_FUNCS(seteuid setresuid setegid setresgid chroot bzero strerror strerror_r)
+AC_CHECK_FUNCS(seteuid setreuid setresuid setegid setregid setresgid)
+AC_CHECK_FUNCS(chroot bzero strerror strerror_r)
 AC_CHECK_FUNCS(vsyslog setlinebuf mktime ftruncate chsize rename)
 AC_CHECK_FUNCS(waitpid wait4 strlcpy strlcat initgroups memmove strdup)
 AC_CHECK_FUNCS(pread pwrite strndup strcasestr strtok_r mkdtemp dup2 dprintf vdprintf)

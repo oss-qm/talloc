@@ -172,7 +172,8 @@ def SAMBA_LIBRARY(bld, libname, source,
                         autoproto_extra_source=autoproto_extra_source,
                         depends_on     = depends_on,
                         hide_symbols   = hide_symbols,
-                        pyext          = pyext or (target_type == "PYTHON"),
+                        pyembed        = pyembed,
+                        pyext          = pyext,
                         local_include  = local_include,
                         global_include = global_include)
 
@@ -211,11 +212,9 @@ def SAMBA_LIBRARY(bld, libname, source,
     ldflags = TO_LIST(ldflags)
 
     features = 'cc cshlib symlink_lib install_lib'
-    if target_type == 'PYTHON':
+    if pyext:
         features += ' pyext'
-    if pyext or pyembed:
-        # this is quite strange. we should add pyext feature for pyext
-        # but that breaks the build. This may be a bug in the waf python tool
+    if pyembed:
         features += ' pyembed'
 
     if abi_directory:
@@ -492,7 +491,8 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
                     vars=None,
                     subdir=None,
                     hide_symbols=False,
-                    pyext=False):
+                    pyext=False,
+                    pyembed=False):
     '''define a Samba subsystem'''
 
     if not enabled:
@@ -519,6 +519,8 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
     features = 'cc'
     if pyext:
         features += ' pyext'
+    if pyembed:
+        features += ' pyembed'
 
     t = bld(
         features       = features,
@@ -533,7 +535,7 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
         global_include = global_include,
         samba_subsystem= subsystem_name,
         samba_use_hostcc = use_hostcc,
-        samba_use_global_deps = use_global_deps
+        samba_use_global_deps = use_global_deps,
         )
 
     if cflags_end is not None:
