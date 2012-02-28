@@ -1,8 +1,9 @@
 talloc (2.0.8-1) UNRELEASED; urgency=low
 
   * Bump standards version to 3.9.3 (no changes).
+  * Use parseable copyright file format.
 
- -- Jelmer Vernooij <jelmer@debian.org>  Tue, 28 Feb 2012 15:41:03 +0100
+ -- Jelmer Vernooij <jelmer@debian.org>  Tue, 28 Feb 2012 15:49:08 +0100
 
 talloc (2.0.8-0.1) unstable; urgency=low
 
