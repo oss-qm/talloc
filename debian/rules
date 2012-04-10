@@ -43,6 +43,11 @@ get-packaged-orig-source:
 
 override_dh_auto_clean:
 	[ ! -f Makefile ] || $(MAKE) distclean
+	# Waf should be doing this; see
+	# https://bugzilla.samba.org/show_bug.cgi?id=8854
+	rm -f .lock-wscript
+	# Waf should be doing this; see
+	# https://bugzilla.samba.org/show_bug.cgi?id=8855
 	rm -f buildtools/wafsamba/*.pyc \
 		buildtools/wafadmin/*.pyc \
 		buildtools/wafadmin/Tools/*.pyc
@@ -52,7 +57,7 @@ override_dh_auto_install:
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
 	ar -rc libtalloc.a bin/default/talloc_*.o
-	cp libtalloc.a $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)
+	mv libtalloc.a $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)
 
 override_dh_strip:
 	dh_strip -plibtalloc2 --dbg-package=libtalloc2-dbg
