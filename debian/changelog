@@ -1,3 +1,13 @@
+talloc (2.0.8-0.1) unstable; urgency=low
+
+  [ Andrew Bartlett ]
+  * Non-maintainer upload with maintainer's agreement.
+  * New upstream release.
+   + Add 08_waf_python_config to cope with python-config no longer
+     being a script.
+
+ -- Christian Perrier <bubulle@debian.org>  Sat, 16 Feb 2013 12:44:12 +0100
+
 talloc (2.0.7+git20120207-1) unstable; urgency=low
 
   * New upstream snapshot.
