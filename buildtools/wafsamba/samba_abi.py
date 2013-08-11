@@ -15,9 +15,11 @@ version_key = lambda x: map(int, x.split("."))
 def normalise_signature(sig):
     '''normalise a signature from gdb'''
     sig = sig.strip()
-    sig = re.sub('^\$[0-9]+\s=\s\{*', '', sig)
-    sig = re.sub('\}(\s0x[0-9a-f]+\s<\w+>)?$', '', sig)
+    sig = re.sub('^\$[0-9]+\s=\s\{(.+)\}$', r'\1', sig)
+    sig = re.sub('^\$[0-9]+\s=\s\{(.+)\}(\s0x[0-9a-f]+\s<\w+>)+$', r'\1', sig)
+    sig = re.sub('^\$[0-9]+\s=\s(0x[0-9a-f]+)\s?(<\w+>)?$', r'\1', sig)
     sig = re.sub('0x[0-9a-f]+', '0xXXXX', sig)
+    sig = re.sub('", <incomplete sequence (\\\\[a-z0-9]+)>', r'\1"', sig)
 
     for t in abi_type_maps:
         # we need to cope with non-word characters in mapped types
@@ -30,10 +32,12 @@ def normalise_signature(sig):
         sig = re.sub(m, abi_type_maps[t], sig)
     return sig
 
+
 def normalise_varargs(sig):
     '''cope with older versions of gdb'''
     sig = re.sub(',\s\.\.\.', '', sig)
     return sig
+
 
 def parse_sigs(sigs, abi_match):
     '''parse ABI signatures file'''
@@ -54,6 +58,7 @@ def parse_sigs(sigs, abi_match):
                     break
             if not matched:
                 continue
+        Logs.debug("%s -> %s" % (sa[1], normalise_signature(sa[1])))
         ret[sa[0]] = normalise_signature(sa[1])
     return ret
 
@@ -105,7 +110,7 @@ def abi_check_task(self):
             got_error = True
 
     if got_error:
-        raise Utils.WafError('ABI for %s has changed - please fix library version then build with --abi-update\nSee http://wiki.samba.org/index.php/Waf#ABI_Checking for more information' % libname)
+        raise Utils.WafError('ABI for %s has changed - please fix library version then build with --abi-update\nSee http://wiki.samba.org/index.php/Waf#ABI_Checking for more information\nIf you have not changed any ABI, and your platform always gives this error, please configure with --abi-check-disable to skip this check' % libname)
 
 
 t = Task.task_type_from_func('abi_check', abi_check_task, color='BLUE', ext_in='.bin')
@@ -149,7 +154,7 @@ def abi_process_file(fname, version, symmap):
 
 def abi_write_vscript(vscript, libname, current_version, versions, symmap, abi_match):
     '''write a vscript file for a library in --version-script format
-    
+
     :param vscript: Path to the vscript file
     :param libname: Name of the library, uppercased
     :param current_version: Current version
@@ -177,10 +182,19 @@ def abi_write_vscript(vscript, libname, current_version, versions, symmap, abi_m
         f.write("}%s;\n\n" % last_key)
         last_key = " %s" % symver
     f.write("%s {\n" % current_version)
+    local_abi = filter(lambda x: x[0] == '!', abi_match)
+    global_abi = filter(lambda x: x[0] != '!', abi_match)
     f.write("\tglobal:\n")
-    for x in abi_match:
-        f.write("\t\t%s;\n" % x)
-    if abi_match != ["*"]:
+    if len(global_abi) > 0:
+        for x in global_abi:
+            f.write("\t\t%s;\n" % x)
+    else:
+        f.write("\t\t*;\n")
+    if len(local_abi) > 0:
+        f.write("\tlocal:\n")
+        for x in local_abi:
+            f.write("\t\t%s;\n" % x[1:])
+    elif abi_match != ["*"]:
         f.write("\tlocal: *;\n")
     f.write("};\n")
     f.close()

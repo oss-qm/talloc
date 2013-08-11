@@ -50,11 +50,21 @@ AC_PROG_INSTALL
 AC_ISC_POSIX
 AC_N_DEFINE(_XOPEN_SOURCE_EXTENDED)
 
+AC_MSG_CHECKING(checking getconf LFS_CFLAGS for large file support flags)
+LFS_CFLAGS=`(getconf LFS_CFLAGS) 2>/dev/null` || LFS_CFLAGS=""
+
+AC_MSG_RESULT(${LFS_CFLAGS})
+if test "x$LFS_CFLAGS" != 'x-1' || test "x$LFS_CFLAGS" != "xundefined"; then
+   CFLAGS="$CFLAGS $LFS_CFLAGS"
+fi
+
 AC_SYS_LARGEFILE
 
 dnl Add #include for broken IRIX header files
 case "$host_os" in
 	*irix6*) AC_ADD_INCLUDE(<standards.h>)
+		AC_N_DEFINE(_XOPEN_SOURCE,600)
+		AC_N_DEFINE(_BSD_TYPES)
 		;;
 	*hpux*)
 		# mmap on HPUX is completely broken...

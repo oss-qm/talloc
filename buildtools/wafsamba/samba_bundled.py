@@ -78,17 +78,22 @@ def LIB_MAY_BE_BUNDLED(conf, libname):
 
 @conf
 def LIB_MUST_BE_BUNDLED(conf, libname):
-    return ('ALL' in conf.env.BUNDLED_LIBS or 
+    return ('ALL' in conf.env.BUNDLED_LIBS or
             libname in conf.env.BUNDLED_LIBS)
 
+@conf
+def LIB_MUST_BE_PRIVATE(conf, libname):
+    return ('ALL' in conf.env.PRIVATE_LIBS or
+            libname in conf.env.PRIVATE_LIBS)
 
 @conf
 def CHECK_PREREQUISITES(conf, prereqs):
+    missing = []
     for syslib in TO_LIST(prereqs):
         f = 'FOUND_SYSTEMLIB_%s' % syslib
         if not f in conf.env:
-            return False
-    return True
+            missing.append(syslib)
+    return missing
 
 
 @runonce
@@ -109,9 +114,10 @@ def CHECK_BUNDLED_SYSTEM_PKG(conf, libname, minversion='0.0.0',
     # system version is found. That prevents possible use of mixed library
     # versions
     if onlyif:
-        if not conf.CHECK_PREREQUISITES(onlyif):
+        missing = conf.CHECK_PREREQUISITES(onlyif)
+        if missing:
             if not conf.LIB_MAY_BE_BUNDLED(libname):
-                Logs.error('ERROR: Use of system library %s depends on missing system library %s' % (libname, onlyif))
+                Logs.error('ERROR: Use of system library %s depends on missing system library/libraries %r' % (libname, missing))
                 sys.exit(1)
             conf.env[found] = False
             return False
@@ -169,9 +175,10 @@ def CHECK_BUNDLED_SYSTEM(conf, libname, minversion='0.0.0',
     # system version is found. That prevents possible use of mixed library
     # versions
     if onlyif:
-        if not conf.CHECK_PREREQUISITES(onlyif):
+        missing = conf.CHECK_PREREQUISITES(onlyif)
+        if missing:
             if not conf.LIB_MAY_BE_BUNDLED(libname):
-                Logs.error('ERROR: Use of system library %s depends on missing system library %s' % (libname, syslib))
+                Logs.error('ERROR: Use of system library %s depends on missing system library/libraries %r' % (libname, missing))
                 sys.exit(1)
             conf.env[found] = False
             return False
@@ -206,6 +213,9 @@ def CHECK_BUNDLED_SYSTEM(conf, libname, minversion='0.0.0',
     return False
 
 
+def tuplize_version(version):
+    return tuple([int(x) for x in version.split(".")])
+
 @runonce
 @conf
 def CHECK_BUNDLED_SYSTEM_PYTHON(conf, libname, modulename, minversion='0.0.0'):
@@ -230,7 +240,7 @@ def CHECK_BUNDLED_SYSTEM_PYTHON(conf, libname, modulename, minversion='0.0.0'):
         except AttributeError:
             found = False
         else:
-            found = tuple(version.split(".")) >= tuple(minversion.split("."))
+            found = tuplize_version(version) >= tuplize_version(minversion)
     if not found and not conf.LIB_MAY_BE_BUNDLED(libname):
         Logs.error('ERROR: Python module %s of version %s not found, and bundling disabled' % (libname, minversion))
         sys.exit(1)
