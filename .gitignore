@@ -1,0 +1,3 @@
+*.pyc
+*.debhelper.log
+debian/tmp/
