@@ -3,6 +3,7 @@ talloc (2.0.8-1) UNRELEASED; urgency=low
   * Bump standards version to 3.9.3 (no changes).
   * Use parseable copyright file format.
   * Properly clean up after build.
+  * Migrate to Git.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Tue, 10 Apr 2012 20:25:09 +0200
 
