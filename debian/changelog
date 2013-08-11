@@ -9,6 +9,9 @@ talloc (2.0.8-1) UNRELEASED; urgency=low
   [ Christian Perrier ]
   * Use versioned license link in debian/copyright
 
+  [ Jelmer Vernooij ]
+  * Use dpkg-buildflags, enables hardening.
+
  -- Jelmer Vernooij <jelmer@debian.org>  Tue, 10 Apr 2012 20:25:09 +0200
 
 talloc (2.0.8-0.1) unstable; urgency=low
