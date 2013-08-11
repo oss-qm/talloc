@@ -1,4 +1,4 @@
-talloc (2.0.8-1) UNRELEASED; urgency=low
+talloc (2.0.8-1) unstable; urgency=low
 
   [ Jelmer Vernooij ]
   * Bump standards version to 3.9.3 (no changes).
