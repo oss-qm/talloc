@@ -1,6 +1,7 @@
 talloc (2.1.0-1) UNRELEASED; urgency=low
 
   * New upstream release.
+   + Drop 08_waf_python_config: now applied upstream.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 14 Sep 2013 13:03:51 +0100
 
