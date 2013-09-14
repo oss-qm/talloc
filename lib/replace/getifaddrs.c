@@ -4,19 +4,23 @@
    Copyright (C) Andrew Tridgell 1998
    Copyright (C) Jeremy Allison 2007
    Copyright (C) Jelmer Vernooij <jelmer@samba.org> 2007
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
-   
-   This program is distributed in the hope that it will be useful,
+
+     ** NOTE! The following LGPL license applies to the replace
+     ** library. This does NOT imply that all of Samba is released
+     ** under the LGPL
+
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 3 of the License, or (at your option) any later version.
+
+   This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #define SOCKET_WRAPPER_NOT_REPLACE
@@ -109,11 +113,23 @@ int rep_getifaddrs(struct ifaddrs **ifap)
 	for (i=n-1; i>=0; i--) {
 		if (ioctl(fd, SIOCGIFFLAGS, &ifr[i]) == -1) {
 			freeifaddrs(*ifap);
+			close(fd);
 			return -1;
 		}
 
 		curif = calloc(1, sizeof(struct ifaddrs));
+		if (curif == NULL) {
+			freeifaddrs(*ifap);
+			close(fd);
+			return -1;
+		}
 		curif->ifa_name = strdup(ifr[i].ifr_name);
+		if (curif->ifa_name == NULL) {
+			free(curif);
+			freeifaddrs(*ifap);
+			close(fd);
+			return -1;
+		}
 		curif->ifa_flags = ifr[i].ifr_flags;
 		curif->ifa_dstaddr = NULL;
 		curif->ifa_data = NULL;
@@ -122,11 +138,28 @@ int rep_getifaddrs(struct ifaddrs **ifap)
 		curif->ifa_addr = NULL;
 		if (ioctl(fd, SIOCGIFADDR, &ifr[i]) != -1) {
 			curif->ifa_addr = sockaddr_dup(&ifr[i].ifr_addr);
+			if (curif->ifa_addr == NULL) {
+				free(curif->ifa_name);
+				free(curif);
+				freeifaddrs(*ifap);
+				close(fd);
+				return -1;
+			}
 		}
 
 		curif->ifa_netmask = NULL;
 		if (ioctl(fd, SIOCGIFNETMASK, &ifr[i]) != -1) {
 			curif->ifa_netmask = sockaddr_dup(&ifr[i].ifr_addr);
+			if (curif->ifa_netmask == NULL) {
+				if (curif->ifa_addr != NULL) {
+					free(curif->ifa_addr);
+				}
+				free(curif->ifa_name);
+				free(curif);
+				freeifaddrs(*ifap);
+				close(fd);
+				return -1;
+			}
 		}
 
 		if (lastif == NULL) {

@@ -53,8 +53,16 @@ struct foo bar = { .y = 'X', .x = 1 };
                 conf.ADD_CFLAGS(f)
             break
 
+    if conf.CHECK_CFLAGS(['-fstack-protector']) and conf.CHECK_LDFLAGS(['-fstack-protector']):
+        conf.ADD_CFLAGS('-fstack-protector')
+        conf.ADD_LDFLAGS('-fstack-protector')
+
     # Try to find the right extra flags for -Werror behaviour
-    for f in ["-Werror", "-w2", "-errwarn"]:
+    for f in ["-Werror",       # GCC
+	      "-errwarn=%all", # Sun Studio
+	      "-qhalt=w",     # IBM xlc
+	      "-w2",           # Tru64
+	      ]:
         if conf.CHECK_CFLAGS([f], '''
 '''):
             if not 'WERROR_CFLAGS' in conf.env:
@@ -72,7 +80,7 @@ struct foo bar = { .y = 'X', .x = 1 };
     conf.CHECK_HEADERS('sys/id.h sys/ioctl.h sys/ipc.h sys/mman.h sys/mode.h sys/ndir.h sys/priv.h')
     conf.CHECK_HEADERS('sys/resource.h sys/security.h sys/shm.h sys/statfs.h sys/statvfs.h sys/termio.h')
     conf.CHECK_HEADERS('sys/vfs.h sys/xattr.h termio.h termios.h sys/file.h')
-    conf.CHECK_HEADERS('sys/wait.h sys/stat.h malloc.h grp.h')
+    conf.CHECK_HEADERS('sys/ucontext.h sys/wait.h sys/stat.h malloc.h grp.h')
     conf.CHECK_HEADERS('sys/select.h setjmp.h utime.h sys/syslog.h syslog.h')
     conf.CHECK_HEADERS('stdarg.h vararg.h sys/mount.h mntent.h')
     conf.CHECK_HEADERS('stropts.h unix.h string.h strings.h sys/param.h limits.h')
@@ -81,20 +89,46 @@ struct foo bar = { .y = 'X', .x = 1 };
                           sys/sockio.h sys/un.h''', together=True)
     conf.CHECK_HEADERS('sys/uio.h ifaddrs.h direct.h dirent.h')
     conf.CHECK_HEADERS('windows.h winsock2.h ws2tcpip.h')
-    conf.CHECK_HEADERS('libintl.h errno.h')
+    conf.CHECK_HEADERS('errno.h')
     conf.CHECK_HEADERS('gcrypt.h getopt.h iconv.h')
     conf.CHECK_HEADERS('sys/inotify.h memory.h nss.h sasl/sasl.h')
     conf.CHECK_HEADERS('security/pam_appl.h zlib.h asm/unistd.h')
     conf.CHECK_HEADERS('aio.h sys/unistd.h rpc/rpc.h rpc/nettype.h alloca.h float.h')
 
-    conf.CHECK_HEADERS('rpcsvc/nis.h rpcsvc/ypclnt.h sys/prctl.h sys/sysctl.h')
+    conf.CHECK_HEADERS('rpcsvc/nis.h rpcsvc/ypclnt.h sys/sysctl.h')
     conf.CHECK_HEADERS('sys/fileio.h sys/filesys.h sys/dustat.h sys/sysmacros.h')
-    conf.CHECK_HEADERS('xfs/libxfs.h netgroup.h rpcsvc/yp_prot.h')
+    conf.CHECK_HEADERS('xfs/libxfs.h netgroup.h')
+
+    conf.CHECK_CODE('', headers='rpc/rpc.h rpcsvc/yp_prot.h', define='HAVE_RPCSVC_YP_PROT_H')
+
     conf.CHECK_HEADERS('valgrind.h valgrind/valgrind.h valgrind/memcheck.h')
     conf.CHECK_HEADERS('nss_common.h nsswitch.h ns_api.h')
     conf.CHECK_HEADERS('sys/extattr.h sys/ea.h sys/proplist.h sys/cdefs.h')
     conf.CHECK_HEADERS('utmp.h utmpx.h lastlog.h malloc.h')
     conf.CHECK_HEADERS('syscall.h sys/syscall.h inttypes.h')
+
+    # Check for process set name support
+    conf.CHECK_CODE('''
+                    #include <sys/prctl.h>
+                    int main(void) {
+                        prctl(0);
+                        return 0;
+                    }
+                    ''',
+                    'HAVE_PRCTL',
+                    headers='sys/prctl.h',
+                    msg='Checking for prctl syscall')
+
+    conf.CHECK_CODE('''
+                    #include <unistd.h>
+                    #ifdef HAVE_FCNTL_H
+                    #include <fcntl.h>
+                    #endif
+                    int main(void) { int fd = open("/dev/null", O_DIRECT); }
+                    ''',
+                    define='HAVE_OPEN_O_DIRECT',
+                    addmain=False,
+                    msg='Checking for O_DIRECT flag to open(2)')
 
     conf.CHECK_TYPES('"long long" intptr_t uintptr_t ptrdiff_t comparison_fn_t')
     conf.CHECK_TYPE('_Bool', define='HAVE__Bool')
@@ -182,8 +216,30 @@ struct foo bar = { .y = 'X', .x = 1 };
                     lib='nsl socket',
                     headers='sys/socket.h netdb.h netinet/in.h')
 
+    if conf.CONFIG_SET('HAVE_SYS_UCONTEXT_H') and conf.CONFIG_SET('HAVE_SIGNAL_H'):
+        conf.CHECK_CODE('''
+                       ucontext_t uc;
+                       sigaddset(&uc.uc_sigmask, SIGUSR1);
+                       ''',
+                       'HAVE_UCONTEXT_T',
+                       msg="Checking whether we have ucontext_t",
+                       headers='signal.h sys/ucontext.h')
+
     # these may be builtins, so we need the link=False strategy
     conf.CHECK_FUNCS('strdup memmem printf memset memcpy memmove strcpy strncpy bzero', link=False)
+
+    # See https://bugzilla.samba.org/show_bug.cgi?id=1097
+    #
+    # Ported in from autoconf where it was added with this commit:
+    # commit 804cfb20a067b4b687089dc72a8271b3abf20f31
+    # Author: Simo Sorce <idra@samba.org>
+    # Date:   Wed Aug 25 14:24:16 2004 +0000
+    #     r2070: Let's try to overload srnlen and strndup for AIX where they are natly broken.
+
+    host_os = sys.platform
+    if host_os.rfind('aix') > -1:
+        conf.DEFINE('BROKEN_STRNLEN', 1)
+        conf.DEFINE('BROKEN_STRNDUP', 1)
 
     conf.CHECK_FUNCS('shl_load shl_unload shl_findsym')
     conf.CHECK_FUNCS('pipe strftime srandom random srand rand usleep setbuffer')
@@ -195,6 +251,7 @@ struct foo bar = { .y = 'X', .x = 1 };
     conf.CHECK_FUNCS('link readlink symlink realpath snprintf vsnprintf')
     conf.CHECK_FUNCS('asprintf vasprintf setenv unsetenv strnlen strtoull __strtoull')
     conf.CHECK_FUNCS('strtouq strtoll __strtoll strtoq memalign posix_memalign')
+    conf.CHECK_FUNCS('prctl')
 
     # libbsd on some platforms provides strlcpy and strlcat
     if not conf.CHECK_FUNCS('strlcpy strlcat'):
@@ -227,7 +284,6 @@ struct foo bar = { .y = 'X', .x = 1 };
                         msg="Checking correct behavior of strtoll",
                         headers = 'errno.h',
                         execute = True,
-                        define_ret = True,
                         define = 'HAVE_BSD_STRTOLL',
                         )
     conf.CHECK_FUNCS('if_nametoindex strerror_r')
@@ -254,7 +310,7 @@ listxattr removexattr setxattr
 attr_get attr_getf attr_list attr_listf attropen attr_remove
 attr_removef attr_set attr_setf extattr_delete_fd extattr_delete_file
 extattr_get_fd extattr_get_file extattr_list_fd extattr_list_file
-extattr_set_fd extattr_set_file fgetea flistea
+extattr_set_fd extattr_set_file fgetea
 fremoveea fsetea getea listea
 removeea setea
 ''', 'attr', checklibc=True, headers=xattr_headers)
@@ -307,17 +363,41 @@ removeea setea
                         headers='netinet/in.h arpa/nameser.h resolv.h')
 
 
-    if not conf.CHECK_FUNCS_IN('gettext', 'intl', checklibc=True, headers='libintl.h'):
-    # Some hosts need lib iconv for linking with lib intl
-    # So we try with flags just in case it helps.
-        oldflags = conf.env['LDFLAGS_INTL']
-        conf.env['LDFLAGS_INTL'] = "-liconv"
-        if not conf.CHECK_LIB('intl'):
-            conf.env['LDFLAGS_INTL'] = oldflags
+    conf.env.intl_libs=''
+    if not Options.options.disable_gettext:
+        conf.CHECK_HEADERS('libintl.h')
+        conf.CHECK_LIB('intl')
+        # *textdomain functions are not strictly necessary
+        conf.CHECK_FUNCS_IN('bindtextdomain textdomain bind_textdomain_codeset',
+                            '', checklibc=True, headers='libintl.h')
+        # gettext and dgettext must exist
+        # on some systems (the ones with glibc, those are in libc)
+        if conf.CHECK_FUNCS_IN('dgettext gettext', '', checklibc=True, headers='libintl.h'):
+            # save for dependency definitions
+            conf.env.intl_libs=''
+        # others (e.g. FreeBSD) have seperate libintl
+        elif conf.CHECK_FUNCS_IN('dgettext gettext', 'intl', checklibc=False, headers='libintl.h'):
+            # save for dependency definitions
+            conf.env.intl_libs='intl'
+            # recheck with libintl
+            conf.CHECK_FUNCS_IN('bindtextdomain textdomain bind_textdomain_codeset',
+                            'intl', checklibc=False, headers='libintl.h')
         else:
-            conf.CHECK_FUNCS_IN('gettext', 'intl', checklibc=True, headers='libintl.h')
+            # Some hosts need lib iconv for linking with lib intl
+            # So we try with flags just in case it helps.
+            oldflags = conf.env['EXTRA_LDFLAGS'];
+            conf.env['EXTRA_LDFLAGS'].extend("-liconv")
+            conf.CHECK_FUNCS_IN('dgettext gettext bindtextdomain textdomain bind_textdomain_codeset',
+                                'intl', checklibc=False, headers='libintl.h')
+            conf.env['EXTRA_LDFLAGS'] = oldflags
+            if conf.env['HAVE_GETTEXT'] and conf.env['HAVE_DGETTEXT']:
+                # save for dependency definitions
+                conf.env.intl_libs='iconv intl'
+            else:
+                conf.fatal('library gettext not found, try specifying the path to ' +
+                           'it with --with-gettext=</path/to/gettext> or ' +
+                           '--without-gettext to build without''')
 
-    conf.CHECK_FUNCS_IN('dgettext gettext', 'intl', headers='libintl.h')
     conf.CHECK_FUNCS_IN('pthread_create', 'pthread', checklibc=True, headers='pthread.h')
 
     conf.CHECK_FUNCS_IN('crypt', 'crypt', checklibc=True)
@@ -473,17 +553,6 @@ removeea setea
                            execute=True):
             break
 
-    if conf.CHECK_FUNCS('getpass getpassphrase'):
-        # if we have both, then we prefer getpassphrase
-        conf.DEFINE('REPLACE_GETPASS_BY_GETPASSPHRASE', 1)
-        conf.DEFINE('REPLACE_GETPASS', 1)
-    else:
-        conf.CHECK_CODE('''#include "getpass.c"
-                       int main(void) { return 0; }''',
-                    addmain=False,
-                    define='REPLACE_GETPASS',
-                    cflags='-DNO_CONFIG_H')
-
     conf.RECURSE('system')
     conf.SAMBA_CONFIG_H()
 
@@ -533,7 +602,6 @@ def build(bld):
 
     REPLACE_SOURCE = REPLACE_HOSTCC_SOURCE
 
-    if bld.CONFIG_SET('REPLACE_GETPASS'):        REPLACE_SOURCE += ' getpass.c'
     if not bld.CONFIG_SET('HAVE_CRYPT'):         REPLACE_SOURCE += ' crypt.c'
     if not bld.CONFIG_SET('HAVE_DLOPEN'):        REPLACE_SOURCE += ' dlfcn.c'
     if not bld.CONFIG_SET('HAVE_POLL'):          REPLACE_SOURCE += ' poll.c'
@@ -582,6 +650,8 @@ def build(bld):
                         source='hdr_replace.h',
                         target='stdbool.h',
                         enabled = not bld.CONFIG_SET('HAVE_STDBOOL_H'))
+
+    bld.SAMBA_SUBSYSTEM('samba_intl', source='', use_global_deps=False,deps=bld.env.intl_libs)
 
 def dist():
     '''makes a tarball for distribution'''
