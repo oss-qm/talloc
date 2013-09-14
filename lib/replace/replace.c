@@ -405,7 +405,7 @@ int rep_mkstemp(char *template)
 	mktemp(template);
 	if (template[0] == 0)
 		return -1;
-	return open(p, O_CREAT|O_EXCL|O_RDWR, 0600);
+	return open(template, O_CREAT|O_EXCL|O_RDWR, 0600);
 }
 #endif
 
@@ -741,7 +741,7 @@ void *rep_memmem(const void *haystack, size_t haystacklen,
 }
 #endif
 
-#ifndef HAVE_VDPRINTF
+#if !defined(HAVE_VDPRINTF) || !defined(HAVE_C99_VSNPRINTF)
 int rep_vdprintf(int fd, const char *format, va_list ap)
 {
 	char *s = NULL;
@@ -758,7 +758,7 @@ int rep_vdprintf(int fd, const char *format, va_list ap)
 }
 #endif
 
-#ifndef HAVE_DPRINTF
+#if !defined(HAVE_DPRINTF) || !defined(HAVE_C99_VSNPRINTF)
 int rep_dprintf(int fd, const char *format, ...)
 {
 	int ret;
@@ -785,7 +785,7 @@ char *rep_get_current_dir_name(void)
 }
 #endif
 
-#if !defined(HAVE_STRERROR_R) || !defined(STRERROR_R_PROTO_COMPATIBLE)
+#ifndef HAVE_STRERROR_R
 int rep_strerror_r(int errnum, char *buf, size_t buflen)
 {
 	char *s = strerror(errnum);

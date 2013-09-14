@@ -1267,6 +1267,64 @@ static bool test_pool_steal(void)
 	return true;
 }
 
+static bool test_pool_nest(void)
+{
+	void *p1, *p2, *p3;
+	void *e = talloc_new(NULL);
+
+	p1 = talloc_pool(NULL, 1024);
+	torture_assert("talloc_pool", p1 != NULL, "failed");
+
+	p2 = talloc_pool(p1, 500);
+	torture_assert("talloc_pool", p2 != NULL, "failed");
+
+	p3 = talloc_size(p2, 10);
+
+	talloc_steal(e, p3);
+
+	talloc_free(p2);
+
+	talloc_free(p3);
+
+	talloc_free(p1);
+
+	return true;
+}
+
+struct pooled {
+	char *s1;
+	char *s2;
+	char *s3;
+};
+
+static bool test_pooled_object(void)
+{
+	struct pooled *p;
+	const char *s1 = "hello";
+	const char *s2 = "world";
+	const char *s3 = "";
+
+	p = talloc_pooled_object(NULL, struct pooled, 3,
+			strlen(s1)+strlen(s2)+strlen(s3)+3);
+
+	if (talloc_get_size(p) != sizeof(struct pooled)) {
+		return false;
+	}
+
+	p->s1 = talloc_strdup(p, s1);
+
+	TALLOC_FREE(p->s1);
+	p->s1 = talloc_strdup(p, s2);
+	TALLOC_FREE(p->s1);
+
+	p->s1 = talloc_strdup(p, s1);
+	p->s2 = talloc_strdup(p, s2);
+	p->s3 = talloc_strdup(p, s3);
+
+	TALLOC_FREE(p);
+	return true;
+}
+
 static bool test_free_ref_null_context(void)
 {
 	void *p1, *p2, *p3;
@@ -1359,6 +1417,8 @@ static bool test_memlimit(void)
 {
 	void *root;
 	char *l1, *l2, *l3, *l4, *l5, *t;
+	char *pool;
+	int i;
 
 	printf("test: memlimit\n# MEMORY LIMITS\n");
 
@@ -1520,6 +1580,31 @@ static bool test_memlimit(void)
 	talloc_report_full(root, stdout);
 	talloc_free(root);
 
+	/* Test memlimits with pools. */
+	pool = talloc_pool(NULL, 10*1024);
+	torture_assert("memlimit", pool != NULL,
+		"failed: alloc should not fail due to memory limit\n");
+	talloc_set_memlimit(pool, 10*1024);
+	for (i = 0; i < 9; i++) {
+		l1 = talloc_size(pool, 1024);
+		torture_assert("memlimit", l1 != NULL,
+			"failed: alloc should not fail due to memory limit\n");
+	}
+	/* The next alloc should fail. */
+	l2 = talloc_size(pool, 1024);
+	torture_assert("memlimit", l2 == NULL,
+			"failed: alloc should fail due to memory limit\n");
+
+	/* Moving one of the children shouldn't change the limit,
+	   as it's still inside the pool. */
+	root = talloc_new(NULL);
+	talloc_steal(root, l1);
+	l2 = talloc_size(pool, 1024);
+	torture_assert("memlimit", l2 == NULL,
+			"failed: alloc should fail due to memory limit\n");
+
+	talloc_free(pool);
+	talloc_free(root);
 	printf("success: memlimit\n");
 
 	return true;
@@ -1539,6 +1624,10 @@ bool torture_local_talloc(struct torture_context *tctx)
 
 	setlinebuf(stdout);
 
+	test_reset();
+	ret &= test_pooled_object();
+	test_reset();
+	ret &= test_pool_nest();
 	test_reset();
 	ret &= test_ref1();
 	test_reset();

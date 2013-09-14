@@ -46,14 +46,14 @@
 #endif
 
 
-#ifdef HAVE_STDINT_H
+#ifdef HAVE_INTTYPES_H
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#elif HAVE_STDINT_H
 #include <stdint.h>
 /* force off HAVE_INTTYPES_H so that roken doesn't try to include both,
    which causes a warning storm on irix */
 #undef HAVE_INTTYPES_H
-#elif HAVE_INTTYPES_H
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #endif
 
 #ifdef HAVE_MALLOC_H
@@ -106,6 +106,45 @@
 #endif
 #ifndef PRIu64
 # define PRIu64		__PRI64_PREFIX "u"
+#endif
+
+#ifndef SCNd8
+# define SCNd8		"hhd"
+#endif
+#ifndef SCNd16
+# define SCNd16		"hd"
+#endif
+#ifndef SCNd32
+# define SCNd32		"d"
+#endif
+#ifndef SCNd64
+# define SCNd64		__PRI64_PREFIX "d"
+#endif
+
+#ifndef SCNi8
+# define SCNi8		"hhi"
+#endif
+#ifndef SCNi16
+# define SCNi16		"hi"
+#endif
+#ifndef SCNi32
+# define SCNi32		"i"
+#endif
+#ifndef SCNi64
+# define SCNi64		__PRI64_PREFIX "i"
+#endif
+
+#ifndef SCNu8
+# define SCNu8		"hhu"
+#endif
+#ifndef SCNu16
+# define SCNu16		"hu"
+#endif
+#ifndef SCNu32
+# define SCNu32		"u"
+#endif
+#ifndef SCNu64
+# define SCNu64		__PRI64_PREFIX "u"
 #endif
 
 #ifdef HAVE_BSD_STRING_H
@@ -376,16 +415,6 @@ int rep_dlclose(void *handle);
 /* prototype is in system/network.h */
 #endif
 
-#ifndef HAVE_VDPRINTF
-#define vdprintf rep_vdprintf
-int rep_vdprintf(int fd, const char *format, va_list ap);
-#endif
-
-#ifndef HAVE_DPRINTF
-#define dprintf rep_dprintf
-int rep_dprintf(int fd, const char *format, ...);
-#endif
-
 #ifndef PRINTF_ATTRIBUTE
 #if (__GNUC__ >= 3) && (__GNUC_MINOR__ >= 1 )
 /** Use gcc attribute to check printf fns.  a1 is the 1-based index of
@@ -406,7 +435,17 @@ int rep_dprintf(int fd, const char *format, ...);
 #endif
 #endif
 
-#ifndef HAVE_VASPRINTF
+#if !defined(HAVE_VDPRINTF) || !defined(HAVE_C99_VSNPRINTF)
+#define vdprintf rep_vdprintf
+int rep_vdprintf(int fd, const char *format, va_list ap) PRINTF_ATTRIBUTE(2,0);
+#endif
+
+#if !defined(HAVE_DPRINTF) || !defined(HAVE_C99_VSNPRINTF)
+#define dprintf rep_dprintf
+int rep_dprintf(int fd, const char *format, ...) PRINTF_ATTRIBUTE(2,3);
+#endif
+
+#if !defined(HAVE_VASPRINTF) || !defined(HAVE_C99_VSNPRINTF)
 #define vasprintf rep_vasprintf
 int rep_vasprintf(char **ptr, const char *format, va_list ap) PRINTF_ATTRIBUTE(2,0);
 #endif
@@ -421,9 +460,27 @@ int rep_snprintf(char *,size_t ,const char *, ...) PRINTF_ATTRIBUTE(3,4);
 int rep_vsnprintf(char *,size_t ,const char *, va_list ap) PRINTF_ATTRIBUTE(3,0);
 #endif
 
-#ifndef HAVE_ASPRINTF
+#if !defined(HAVE_ASPRINTF) || !defined(HAVE_C99_VSNPRINTF)
 #define asprintf rep_asprintf
 int rep_asprintf(char **,const char *, ...) PRINTF_ATTRIBUTE(2,3);
+#endif
+
+#if !defined(HAVE_C99_VSNPRINTF)
+#ifdef REPLACE_BROKEN_PRINTF
+/*
+ * We do not redefine printf by default
+ * as it breaks the build if system headers
+ * use __attribute__((format(printf, 3, 0)))
+ * instead of __attribute__((format(__printf__, 3, 0)))
+ */
+#define printf rep_printf
+#endif
+int rep_printf(const char *, ...) PRINTF_ATTRIBUTE(1,2);
+#endif
+
+#if !defined(HAVE_C99_VSNPRINTF)
+#define fprintf rep_fprintf
+int rep_fprintf(FILE *stream, const char *, ...) PRINTF_ATTRIBUTE(2,3);
 #endif
 
 #ifndef HAVE_VSYSLOG
@@ -552,8 +609,7 @@ ssize_t rep_pwrite(int __fd, const void *__buf, size_t __nbytes, off_t __offset)
 char *rep_get_current_dir_name(void);
 #endif
 
-#if !defined(HAVE_STRERROR_R) || !defined(STRERROR_R_PROTO_COMPATIBLE)
-#undef strerror_r
+#ifndef HAVE_STRERROR_R
 #define strerror_r rep_strerror_r
 int rep_strerror_r(int errnum, char *buf, size_t buflen);
 #endif
@@ -825,17 +881,6 @@ int fdatasync(int );
 #ifndef HAVE_POLL
 #define poll rep_poll
 /* prototype is in "system/network.h" */
-#endif
-
-#if !defined(getpass)
-#ifdef REPLACE_GETPASS
-#if defined(REPLACE_GETPASS_BY_GETPASSPHRASE)
-#define getpass(prompt) getpassphrase(prompt)
-#else
-#define getpass(prompt) rep_getpass(prompt)
-char *rep_getpass(const char *prompt);
-#endif
-#endif
 #endif
 
 #ifndef HAVE_GETPEEREID
