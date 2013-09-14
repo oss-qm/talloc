@@ -1,4 +1,4 @@
-talloc (2.1.0-1) UNRELEASED; urgency=low
+talloc (2.1.0-1) unstable; urgency=low
 
   * New upstream release.
    + Drop 08_waf_python_config: now applied upstream.
