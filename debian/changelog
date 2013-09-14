@@ -2,6 +2,8 @@ talloc (2.1.0-1) UNRELEASED; urgency=low
 
   * New upstream release.
    + Drop 08_waf_python_config: now applied upstream.
+  * Bump standards version to 3.9.4 (no changes).
+  * Update Vcs header now that repository is in git.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 14 Sep 2013 13:03:51 +0100
 
