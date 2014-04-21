@@ -1,4 +1,4 @@
-talloc (2.1.0-2) UNRELEASED; urgency=medium
+talloc (2.1.0-2) unstable; urgency=medium
 
   * Change maintainer to Samba Debian maintainers.
   * Bump standards version to 3.9.5 (no changes).
