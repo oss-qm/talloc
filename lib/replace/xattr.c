@@ -25,6 +25,7 @@
    License along with this library; if not, see <http://www.gnu.org/licenses/>.
 */
 
+#define UID_WRAPPER_NOT_REPLACE
 #include "replace.h"
 #include "system/filesys.h"
 #include "system/dir.h"
@@ -194,6 +195,10 @@ static ssize_t bsd_attr_list (int type, extattr_arg arg, char *list, size_t size
 	char *buf;
 	/* Iterate through extattr(2) namespaces */
 	for(t = 0; t < ARRAY_SIZE(extattr); t++) {
+		if (t != EXTATTR_NAMESPACE_USER && geteuid() != 0) {
+			/* ignore all but user namespace when we are not root, see bug 10247 */
+			continue;
+		}
 		switch(type) {
 #if defined(HAVE_EXTATTR_LIST_FILE)
 			case 0:
