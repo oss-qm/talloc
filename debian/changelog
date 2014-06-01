@@ -1,3 +1,9 @@
+talloc (2.1.1-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Mon, 02 Jun 2014 01:22:09 +0200
+
 talloc (2.1.0-2) unstable; urgency=medium
 
   * Change maintainer to Samba Debian maintainers.
