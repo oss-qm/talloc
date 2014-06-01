@@ -761,7 +761,11 @@ type *talloc_get_type(const void *ptr, #type);
  */
 void *talloc_get_type_abort(const void *ptr, #type);
 #else
+#ifdef TALLOC_GET_TYPE_ABORT_NOOP
+#define talloc_get_type_abort(ptr, type) (type *)(ptr)
+#else
 #define talloc_get_type_abort(ptr, type) (type *)_talloc_get_type_abort(ptr, #type, __location__)
+#endif
 void *_talloc_get_type_abort(const void *ptr, const char *name, const char *location);
 #endif
 
@@ -893,7 +897,7 @@ void *_talloc_pooled_object(const void *ctx,
  *
  * @param[in]  ctx      The chunk to be freed.
  */
-#define TALLOC_FREE(ctx) do { talloc_free(ctx); ctx=NULL; } while(0)
+#define TALLOC_FREE(ctx) do { if (ctx != NULL) { talloc_free(ctx); ctx=NULL; } } while(0)
 
 /* @} ******************************************************************/
 
@@ -961,6 +965,10 @@ size_t talloc_reference_count(const void *ptr);
  * @return              The original pointer 'ptr', NULL if talloc ran out of
  *                      memory in creating the reference.
  *
+ * @warning You should try to avoid using this interface. It turns a beautiful
+ *          talloc-tree into a graph. It is often really hard to debug if you
+ *          screw something up by accident.
+ *
  * Example:
  * @code
  *      unsigned int *a, *b, *c;
@@ -1000,6 +1008,10 @@ void *_talloc_reference_loc(const void *context, const void *ptr, const char *lo
  * @note If the parent has already been removed using talloc_free() then
  * this function will fail and will return -1.  Likewise, if ptr is NULL,
  * then the function will make no modifications and return -1.
+ *
+ * @warning You should try to avoid using this interface. It turns a beautiful
+ *          talloc-tree into a graph. It is often really hard to debug if you
+ *          screw something up by accident.
  *
  * Example:
  * @code
