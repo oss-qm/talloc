@@ -1,7 +1,8 @@
-talloc (2.1.1-2) UNRELEASED; urgency=medium
+talloc (2.1.1-2) unstable; urgency=low
 
   * Use canonical URL in Vcs-Git.
   * Specify branch in Vcs-Git.
+  * libtalloc-dev: Install talloc_guide.txt.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 05 Jul 2014 23:40:00 +0200
 
