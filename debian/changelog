@@ -1,6 +1,7 @@
 talloc (2.1.2-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Bump standards version to 3.9.6.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sun, 15 Mar 2015 02:57:19 +0100
 
