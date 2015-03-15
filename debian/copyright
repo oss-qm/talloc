@@ -82,7 +82,7 @@ Files: libreplace/timegm.c
 Comment: This file is not used when building the Debian package.
 Copyright:
   Copyright (c) Kungliga Tekniska Högskolan    1997
-License:
+License: BSD-3
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
