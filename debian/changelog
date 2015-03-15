@@ -1,3 +1,9 @@
+talloc (2.1.2-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Jelmer Vernooij <jelmer@debian.org>  Sun, 15 Mar 2015 02:57:19 +0100
+
 talloc (2.1.1-2) unstable; urgency=low
 
   * Use canonical URL in Vcs-Git.
