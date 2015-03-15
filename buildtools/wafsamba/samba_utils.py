@@ -39,8 +39,8 @@ def GET_TARGET_TYPE(ctx, target):
 # this is used as a decorator to make functions only
 # run once. Based on the idea from
 # http://stackoverflow.com/questions/815110/is-there-a-decorator-to-simply-cache-function-return-values
-runonce_ret = {}
 def runonce(function):
+    runonce_ret = {}
     def runonce_wrapper(*args):
         if args in runonce_ret:
             return runonce_ret[args]
@@ -214,7 +214,8 @@ def TO_LIST(str, delimiter=None):
     if str is None:
         return []
     if isinstance(str, list):
-        return str
+        # we need to return a new independent list...
+        return list(str)
     if len(str) == 0:
         return []
     lst = str.split(delimiter)
