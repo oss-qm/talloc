@@ -3,6 +3,9 @@ talloc (2.1.2-2) UNRELEASED; urgency=medium
   * Make libtalloc2-dbg Multi-Arch: same.
   * Fix lib/replace/ paths in debian/copyright.
   * Pass CPPFLAGS onto configure to enable hardening.
+  * Add patch revert-ldflags-atend: Revert upstream change to add
+    LDFLAGS at end of LDFLAGS command-line. This broke use of
+    --Wl,--as-needed.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 25 Apr 2015 13:22:20 +0000
 
