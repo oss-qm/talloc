@@ -1,6 +1,7 @@
 talloc (2.1.2-2) UNRELEASED; urgency=medium
 
   * Make libtalloc2-dbg Multi-Arch: same.
+  * Fix lib/replace/ paths in debian/copyright.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sat, 25 Apr 2015 13:22:20 +0000
 
