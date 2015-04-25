@@ -1,4 +1,4 @@
-talloc (2.1.2-1) UNRELEASED; urgency=medium
+talloc (2.1.2-1) unstable; urgency=medium
 
   * New upstream release.
   * Bump standards version to 3.9.6.
