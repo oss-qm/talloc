@@ -26,7 +26,7 @@ override_dh_python2:
 	dh_python2 --no-guessing-versions
 
 override_dh_auto_configure:
-	LDFLAGS="$(LDFLAGS)" PYTHON="$(PYTHON)" PYTHON_CONFIG="$(PYTHON_CONFIG)" CFLAGS="$(CFLAGS)" ./configure $(conf_args)
+	LDFLAGS="$(LDFLAGS)" PYTHON="$(PYTHON)" PYTHON_CONFIG="$(PYTHON_CONFIG)" CFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" ./configure $(conf_args)
 
 override_dh_auto_build:
 	$(MAKE) all
