@@ -21,6 +21,7 @@ Description: hierarchical pool based memory allocator
 
 Package: libtalloc2-dbg
 Pre-Depends: ${misc:Pre-Depends}
+Multi-Arch: same
 Section: debug
 Priority: extra
 Depends: libtalloc2 (= ${binary:Version}), ${misc:Depends}
