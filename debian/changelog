@@ -1,4 +1,4 @@
-talloc (2.1.2-2) UNRELEASED; urgency=medium
+talloc (2.1.2-2) unstable; urgency=medium
 
   * Make libtalloc2-dbg Multi-Arch: same.
   * Fix lib/replace/ paths in debian/copyright.
