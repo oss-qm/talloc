@@ -1,0 +1,30 @@
+From 80f0c7508776f552533414ca3c2f3398d8f619c4 Mon Sep 17 00:00:00 2001
+From: Jelmer Vernooij <jelmer@samba.org>
+Date: Sat, 18 Apr 2015 21:14:53 +0000
+Subject: [PATCH] Add refentryinfo date.
+
+This causes the talloc.3 build to be reproducible. We're trying to
+make all builds in Debian reproducible - see
+https://wiki.debian.org/ReproducibleBuilds/About for reasoning.
+
+Change-Id: I9bd64d1783abfb33211cbc9dc9c2bbf6db047f3e
+Signed-Off-By: Jelmer Vernooij <jelmer@samba.org>
+---
+ lib/talloc/man/talloc.3.xml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/lib/talloc/man/talloc.3.xml b/lib/talloc/man/talloc.3.xml
+index 553eaec..6101a12 100644
+--- a/man/talloc.3.xml
++++ b/man/talloc.3.xml
+@@ -1,6 +1,7 @@
+ <?xml version="1.0"?>
+ <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+ <refentry>
++  <refentryinfo><date>2015-04-10</date></refentryinfo>
+   <refmeta>
+     <refentrytitle>talloc</refentrytitle>
+     <manvolnum>3</manvolnum>
+-- 
+2.1.4
+
