@@ -1,4 +1,4 @@
-talloc (2.1.2-3) UNRELEASED; urgency=medium
+talloc (2.1.2-3) unstable; urgency=medium
 
   * Add patch reproducible-build: use set time in manpage, make build
     reproducible. Closes: #782864
