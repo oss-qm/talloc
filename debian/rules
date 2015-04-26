@@ -52,7 +52,6 @@ override_dh_auto_clean:
 		buildtools/wafadmin/Tools/*.pyc
 
 override_dh_auto_install:
-	mkdir -p $(DESTDIR)`swig -swiglib`
 	$(MAKE) install DESTDIR=$(DESTDIR)
 	# Waf really should be doing this:
 	ar -rc libtalloc.a bin/default/talloc_*.o

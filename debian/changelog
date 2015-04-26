@@ -3,6 +3,8 @@ talloc (2.1.2-3) UNRELEASED; urgency=medium
   * Add patch reproducible-build: use set time in manpage, make build
     reproducible. Closes: #782864
   * Fix ordering of paragraphs in debian/copyright.
+  * Stop creating empty swig directory.
+  * Drop unused swig dependency.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Sun, 26 Apr 2015 09:58:25 +0000
 
