@@ -48,8 +48,8 @@ override_dh_auto_clean:
 	# Waf should be doing this; see
 	# https://bugzilla.samba.org/show_bug.cgi?id=8855
 	rm -f buildtools/wafsamba/*.pyc \
-		buildtools/wafadmin/*.pyc \
-		buildtools/wafadmin/Tools/*.pyc
+		third_party/waf/wafadmin/*.pyc \
+		third_party/waf/wafadmin/Tools/*.pyc \
 
 override_dh_auto_install:
 	$(MAKE) install DESTDIR=$(DESTDIR)
