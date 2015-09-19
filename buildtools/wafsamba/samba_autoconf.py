@@ -229,7 +229,18 @@ def CHECK_DECLS(conf, vars, reverse=False, headers=None, always=False):
                               headers=headers,
                               msg='Checking for declaration of %s' % v,
                               always=always):
-            ret = False
+            if not CHECK_CODE(conf,
+                      '''
+                      return (int)%s;
+                      ''' % (v),
+                      execute=False,
+                      link=False,
+                      msg='Checking for declaration of %s (as enum)' % v,
+                      local_include=False,
+                      headers=headers,
+                      define=define,
+                      always=always):
+                ret = False
     return ret
 
 
@@ -846,3 +857,7 @@ def SAMBA_CHECK_UNDEFINED_SYMBOL_FLAGS(conf):
     if not sys.platform.startswith("openbsd") and conf.env.undefined_ignore_ldflags == []:
         if conf.CHECK_LDFLAGS(['-undefined', 'dynamic_lookup']):
             conf.env.undefined_ignore_ldflags = ['-undefined', 'dynamic_lookup']
+
+@conf
+def CHECK_CFG(self, *k, **kw):
+    return self.check_cfg(*k, **kw)
