@@ -386,6 +386,22 @@ def RUN_COMMAND(cmd,
     return -1
 
 
+def RUN_PYTHON_TESTS(testfiles, pythonpath=None):
+    env = LOAD_ENVIRONMENT()
+    if pythonpath is None:
+        pythonpath = os.path.join(Utils.g_module.blddir, 'python')
+    result = 0
+    for interp in env.python_interpreters:
+        for testfile in testfiles:
+            cmd = "PYTHONPATH=%s %s %s" % (pythonpath, interp, testfile)
+            print('Running Python test with %s: %s' % (interp, testfile))
+            ret = RUN_COMMAND(cmd)
+            if ret:
+                print('Python test failed: %s' % cmd)
+                result = ret
+    return result
+
+
 # make sure we have md5. some systems don't have it
 try:
     from hashlib import md5
@@ -577,7 +593,7 @@ def map_shlib_extension(ctx, name, python=False):
         return name
     (root1, ext1) = os.path.splitext(name)
     if python:
-        (root2, ext2) = os.path.splitext(ctx.env.pyext_PATTERN)
+        return ctx.env.pyext_PATTERN % root1
     else:
         (root2, ext2) = os.path.splitext(ctx.env.shlib_PATTERN)
     return root1+ext2
