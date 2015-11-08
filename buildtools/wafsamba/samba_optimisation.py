@@ -11,7 +11,7 @@ import Build, Utils, Node
 from TaskGen import feature, after, before
 import preproc
 
-@feature('cc', 'cxx')
+@feature('c', 'cc', 'cxx')
 @after('apply_type_vars', 'apply_lib_vars', 'apply_core')
 def apply_incpaths(self):
     lst = []
@@ -59,7 +59,7 @@ def apply_incpaths(self):
         if node:
             self.env.append_value('INC_PATHS', node)
 
-@feature('cc')
+@feature('c', 'cc')
 @after('apply_incpaths')
 def apply_obj_vars_cc(self):
     """after apply_incpaths for INC_PATHS"""
@@ -165,7 +165,7 @@ def is_this_a_static_lib(self, name):
     try:
         return cache[name]
     except KeyError:
-        ret = cache[name] = 'cstaticlib' in self.bld.name_to_obj(name, self.env).features
+        ret = cache[name] = 'cstaticlib' in self.bld.get_tgen_by_name(name).features
         return ret
 TaskGen.task_gen.is_this_a_static_lib = is_this_a_static_lib
 
@@ -187,7 +187,7 @@ def shared_ancestors(self):
         return ret
 TaskGen.task_gen.shared_ancestors = shared_ancestors
 
-@feature('cc', 'cxx')
+@feature('c', 'cc', 'cxx')
 @after('apply_link', 'init_cc', 'init_cxx', 'apply_core')
 def apply_lib_vars(self):
     """after apply_link because of 'link_task'
@@ -215,7 +215,7 @@ def apply_lib_vars(self):
         if lib_name in seen:
             continue
 
-        y = self.name_to_obj(lib_name)
+        y = self.get_tgen_by_name(lib_name)
         if not y:
             raise Utils.WafError('object %r was not found in uselib_local (required by %r)' % (lib_name, self.name))
         y.post()

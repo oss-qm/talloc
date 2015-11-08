@@ -20,6 +20,7 @@ from samba_perl import *
 from samba_deps import *
 from samba_bundled import *
 from samba_third_party import *
+import samba_cross
 import samba_install
 import samba_conftests
 import samba_abi
@@ -95,9 +96,7 @@ Build.BuildContext.ADD_INIT_FUNCTION = ADD_INIT_FUNCTION
 
 
 def generate_empty_file(task):
-    target_fname = installed_location=task.outputs[0].bldpath(task.env)
-    target_file = open(installed_location, 'w')
-    target_file.close()
+    task.outputs[0].write('')
     return 0
 
 #################################################################
@@ -245,7 +244,7 @@ def SAMBA_LIBRARY(bld, libname, source,
     if bld.env['ENABLE_RELRO'] is True:
         ldflags.extend(TO_LIST('-Wl,-z,relro,-z,now'))
 
-    features = 'cc cshlib symlink_lib install_lib'
+    features = 'c cshlib symlink_lib install_lib'
     if pyext:
         features += ' pyext'
     if pyembed:
@@ -253,6 +252,15 @@ def SAMBA_LIBRARY(bld, libname, source,
 
     if abi_directory:
         features += ' abi_check'
+
+    if pyembed and bld.env['PYTHON_SO_ABI_FLAG']:
+        # For ABI checking, we don't care about the exact Python version.
+        # Replace the Python ABI tag (e.g. ".cpython-35m") by a generic ".py3"
+        abi_flag = bld.env['PYTHON_SO_ABI_FLAG']
+        replacement = '.py%s' % bld.env['PYTHON_VERSION'].split('.')[0]
+        version_libname = libname.replace(abi_flag, replacement)
+    else:
+        version_libname = libname
 
     vscript = None
     if bld.env.HAVE_LD_VERSION_SCRIPT:
@@ -264,7 +272,7 @@ def SAMBA_LIBRARY(bld, libname, source,
             version = None
         if version:
             vscript = "%s.vscript" % libname
-            bld.ABI_VSCRIPT(libname, abi_directory, version, vscript,
+            bld.ABI_VSCRIPT(version_libname, abi_directory, version, vscript,
                             abi_match)
             fullname = apply_pattern(bundled_name, bld.env.shlib_PATTERN)
             fullpath = bld.path.find_or_declare(fullname)
@@ -290,6 +298,7 @@ def SAMBA_LIBRARY(bld, libname, source,
         samba_deps      = deps,
         samba_includes  = includes,
         version_script  = vscript,
+        version_libname = version_libname,
         local_include   = local_include,
         global_include  = global_include,
         vnum            = vnum,
@@ -356,7 +365,7 @@ def SAMBA_BINARY(bld, binname, source,
     if not SET_TARGET_TYPE(bld, binname, 'BINARY'):
         return
 
-    features = 'cc cprogram symlink_bin install_bin'
+    features = 'c cprogram symlink_bin install_bin'
     if pyembed:
         features += ' pyembed'
 
@@ -580,7 +589,7 @@ def SAMBA_SUBSYSTEM(bld, modname, source,
 
     bld.SET_BUILD_GROUP(group)
 
-    features = 'cc'
+    features = 'c'
     if pyext:
         features += ' pyext'
     if pyembed:

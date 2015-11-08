@@ -1,11 +1,11 @@
 # a waf tool to add autoconf-like macros to the configure section
 # and for SAMBA_ macros for building libraries, binaries etc
 
-import Build, os, sys, Options, Utils, Task, re, fnmatch, Logs
+import os, sys, re, fnmatch, shlex
+import Build, Options, Utils, Task, Logs, Configure
 from TaskGen import feature, before
 from Configure import conf, ConfigurationContext
 from Logs import debug
-import shlex
 
 # TODO: make this a --option
 LIB_PATH="shared"
@@ -66,7 +66,7 @@ def ADD_LD_LIBRARY_PATH(path):
 def needs_private_lib(bld, target):
     '''return True if a target links to a private library'''
     for lib in getattr(target, "final_libs", []):
-        t = bld.name_to_obj(lib, bld.env)
+        t = bld.get_tgen_by_name(lib)
         if t and getattr(t, 'private_library', False):
             return True
     return False
@@ -140,7 +140,6 @@ def exec_command(self, cmd, **kw):
     '''this overrides the 'waf -v' debug output to be in a nice
     unix like format instead of a python list.
     Thanks to ita on #waf for this'''
-    import Utils, Logs
     _cmd = cmd
     if isinstance(cmd, list):
         _cmd = ' '.join(cmd)
@@ -164,7 +163,7 @@ def ADD_COMMAND(opt, name, function):
 Options.Handler.ADD_COMMAND = ADD_COMMAND
 
 
-@feature('cc', 'cshlib', 'cprogram')
+@feature('c', 'cc', 'cshlib', 'cprogram')
 @before('apply_core','exec_rule')
 def process_depends_on(self):
     '''The new depends_on attribute for build rules
@@ -173,7 +172,7 @@ def process_depends_on(self):
     if getattr(self , 'depends_on', None):
         lst = self.to_list(self.depends_on)
         for x in lst:
-            y = self.bld.name_to_obj(x, self.env)
+            y = self.bld.get_tgen_by_name(x)
             self.bld.ASSERT(y is not None, "Failed to find dependency %s of %s" % (x, self.name))
             y.post()
             if getattr(y, 'more_includes', None):
@@ -644,7 +643,7 @@ def get_tgt_list(bld):
         type = targets[tgt]
         if not type in ['SUBSYSTEM', 'MODULE', 'BINARY', 'LIBRARY', 'ASN1', 'PYTHON']:
             continue
-        t = bld.name_to_obj(tgt, bld.env)
+        t = bld.get_tgen_by_name(tgt)
         if t is None:
             Logs.error("Target %s of type %s has no task generator" % (tgt, type))
             sys.exit(1)
@@ -657,11 +656,10 @@ def PROCESS_SEPARATE_RULE(self, rule):
         You should have file named wscript_<stage>_rule in the current directory
         where stage is either 'configure' or 'build'
     '''
-    ctxclass = self.__class__.__name__
     stage = ''
-    if ctxclass == 'ConfigurationContext':
+    if isinstance(self, Configure.ConfigurationContext):
         stage = 'configure'
-    elif ctxclass == 'BuildContext':
+    elif isinstance(self, Build.BuildContext):
         stage = 'build'
     file_path = os.path.join(self.curdir, WSCRIPT_FILE+'_'+stage+'_'+rule)
     txt = load_file(file_path)
