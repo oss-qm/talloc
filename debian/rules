@@ -31,7 +31,7 @@ override_dh_auto_configure:
 	LDFLAGS="$(LDFLAGS)" PYTHON="$(PYTHON)" CFLAGS="$(CFLAGS)" CPPFLAGS="$(CPPFLAGS)" ./configure $(conf_args)
 
 override_dh_auto_build:
-	$(MAKE) all WAFFLAGS="-vv"
+	$(MAKE) all V=1
 
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
