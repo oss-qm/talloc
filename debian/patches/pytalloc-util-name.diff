@@ -1,0 +1,21 @@
+# Don't encode the multiarch name into the pytalloc-util library name
+
+Index: b/buildtools/wafsamba/samba_python.py
+===================================================================
+--- a/buildtools/wafsamba/samba_python.py
++++ b/buildtools/wafsamba/samba_python.py
+@@ -122,7 +122,13 @@ Build.BuildContext.SAMBA_PYTHON = SAMBA_
+ 
+ 
+ def pyembed_libname(bld, name, extrapython=False):
+-    return name + bld.env['PYTHON_SO_ABI_FLAG']
++    abi_flag = bld.env['PYTHON_SO_ABI_FLAG']
++    # do we really want the version encoded in the library name?
++    #if bld.env['IS_EXTRA_PYTHON'] and 'DEB_HOST_MULTIARCH' in os.environ:
++    #    abi_flag = abi_flag.replace('-%s' % os.environ['DEB_HOST_MULTIARCH'], '')
++    if bld.env['IS_EXTRA_PYTHON']:
++        abi_flag = '-py3'
++    return name + abi_flag
+ 
+ Build.BuildContext.pyembed_libname = pyembed_libname
+ 

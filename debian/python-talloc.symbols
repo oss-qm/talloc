@@ -14,5 +14,3 @@ libpytalloc-util.so.2 #PACKAGE# #MINVER#
  pytalloc_reference_ex@PYTALLOC_UTIL_2.0.6 2.0.6
  pytalloc_steal@PYTALLOC_UTIL_2.0.6 2.0.6
  pytalloc_steal_ex@PYTALLOC_UTIL_2.0.6 2.0.6
-talloc.so #PACKAGE# #MINVER#
- inittalloc@Base 2.0.6

@@ -1,0 +1,7 @@
+libpytalloc-util-py3.so.2 #PACKAGE# #MINVER#
+ PYTALLOC_UTIL_PY3_2.1.5@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
+ pytalloc_Check@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
+ pytalloc_GetObjectType@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
+ pytalloc_reference_ex@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
+ pytalloc_steal@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
+ pytalloc_steal_ex@PYTALLOC_UTIL_PY3_2.1.5 2.1.5
