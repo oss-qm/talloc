@@ -3,7 +3,6 @@ talloc (2.1.5-2) UNRELEASED; urgency=medium
   [ Matthias Klose ]
   * Build python3 packages.
   * Bump debhelper and standards version.
-  * Do not generate symbols for the extension module
   * Do not encode the SOABI and the multiarch string into the pytalloc-util
     library, just append a '-py3'.
   * Make the build log a bit more verbose.

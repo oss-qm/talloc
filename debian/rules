@@ -69,5 +69,5 @@ override_dh_strip:
 	dh_strip -ppython3-talloc --dbg-package=python3-talloc-dbg
 
 override_dh_makeshlibs:
-	dh_makeshlibs -plibtalloc2 -- -c3
+	dh_makeshlibs -plibtalloc2 -- -c4
 	dh_makeshlibs -ppython-talloc -ppython3-talloc -Xtalloc. -- -c3
