@@ -11,3 +11,4 @@ python-talloc-dbg/
 python-talloc-dev/
 *.debhelper
 python-talloc/
+debhelper-build-stamp
