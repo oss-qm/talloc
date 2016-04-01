@@ -260,15 +260,10 @@ def add_init_functions(self):
 
 
 def check_duplicate_sources(bld, tgt_list):
-    '''see if we are compiling the same source file more than once
-       without an allow_duplicates attribute'''
+    '''see if we are compiling the same source file more than once'''
 
     debug('deps: checking for duplicate sources')
-
     targets = LOCAL_CACHE(bld, 'TARGET_TYPE')
-    ret = True
-
-    global tstart
 
     for t in tgt_list:
         source_list = TO_LIST(getattr(t, 'source', ''))
@@ -286,7 +281,6 @@ def check_duplicate_sources(bld, tgt_list):
 
     # build a list of targets that each source file is part of
     for t in tgt_list:
-        sources = []
         if not targets[t.sname] in [ 'LIBRARY', 'BINARY', 'PYTHON' ]:
             continue
         for obj in t.add_objects:
@@ -306,24 +300,7 @@ def check_duplicate_sources(bld, tgt_list):
             if len(subsystems[s][tname]) > 1:
                 raise Utils.WafError("ERROR: source %s is in more than one subsystem of target '%s': %s" % (s, tname, subsystems[s][tname]))
 
-    return ret
-
-
-def check_orphaned_targets(bld, tgt_list):
-    '''check if any build targets are orphaned'''
-
-    target_dict = LOCAL_CACHE(bld, 'TARGET_TYPE')
-
-    debug('deps: checking for orphaned targets')
-
-    for t in tgt_list:
-        if getattr(t, 'samba_used', False):
-            continue
-        type = target_dict[t.sname]
-        if not type in ['BINARY', 'LIBRARY', 'MODULE', 'ET', 'PYTHON']:
-            if re.search('^PIDL_', t.sname) is None:
-                Logs.warn("Target %s of type %s is unused by any other target" % (t.sname, type))
-
+    return True
 
 def check_group_ordering(bld, tgt_list):
     '''see if we have any dependencies that violate the group ordering
@@ -366,7 +343,7 @@ def check_group_ordering(bld, tgt_list):
                 ret = False
 
     return ret
-
+Build.BuildContext.check_group_ordering = check_group_ordering
 
 def show_final_deps(bld, tgt_list):
     '''show the final dependencies for all targets'''
@@ -1157,15 +1134,13 @@ def check_project_rules(bld):
 
     debug('deps: project rules stage1 completed')
 
-    #check_orphaned_targets(bld, tgt_list)
-
     if not check_duplicate_sources(bld, tgt_list):
         Logs.error("Duplicate sources present - aborting")
         sys.exit(1)
 
     debug("deps: check_duplicate_sources: %f" % (time.clock() - tstart))
 
-    if not check_group_ordering(bld, tgt_list):
+    if not bld.check_group_ordering(tgt_list):
         Logs.error("Bad group ordering - aborting")
         sys.exit(1)
 
