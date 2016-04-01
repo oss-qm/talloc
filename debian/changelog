@@ -1,8 +1,12 @@
-talloc (2.1.5-3) UNRELEASED; urgency=medium
+talloc (2.1.6-1) UNRELEASED; urgency=medium
 
+  [ Jelmer Vernooij ]
   * Bump standards version to 3.9.7 (no changes).
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sun, 28 Feb 2016 14:30:11 +0000
+  [ Andrew Bartlett ]
+  * New Upstream release
+
+ -- Andrew Bartlett <abartlet+debian@catalyst.net.nz>  Fri, 01 Apr 2016 16:19:33 +1300
 
 talloc (2.1.5-2) unstable; urgency=medium
 

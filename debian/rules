@@ -56,6 +56,7 @@ override_dh_auto_clean:
 	rm -f buildtools/wafsamba/*.pyc \
 		third_party/waf/wafadmin/*.pyc \
 		third_party/waf/wafadmin/Tools/*.pyc \
+		third_party/waf/wafadmin/3rdparty/*.pyc \
 
 override_dh_auto_install:
 	$(MAKE) install DESTDIR=$(DESTDIR)
