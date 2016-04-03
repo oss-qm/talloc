@@ -1,8 +1,12 @@
 talloc (2.1.5-3) UNRELEASED; urgency=medium
 
+  [ Jelmer Vernooij ]
   * Bump standards version to 3.9.7 (no changes).
 
- -- Jelmer Vernooij <jelmer@debian.org>  Sun, 28 Feb 2016 14:30:11 +0000
+  [ Andrew Bartlett ]
+  * Remove python3-talloc for now (trying to remove the SOABI caused other issues).
+
+ -- Andrew Bartlett <abartlet+debian@catalyst.net.nz>  Mon, 04 Apr 2016 07:53:47 +1200
 
 talloc (2.1.5-2) unstable; urgency=medium
 
