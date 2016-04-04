@@ -1,4 +1,4 @@
-talloc (2.1.6-1) UNRELEASED; urgency=medium
+talloc (2.1.6-1) unstable; urgency=low
 
   [ Jelmer Vernooij ]
   * Bump standards version to 3.9.7 (no changes).
@@ -10,8 +10,8 @@ talloc (2.1.6-1) UNRELEASED; urgency=medium
 
   [ Jelmer Vernooij ]
   * Fix Vcs-Git header to use master branch rather than unstable.
-  * Add Breaks for older versions of python-samba (<< 2:4.3.6+dfsg-2), because of upstream
-    bug https://bugzilla.samba.org/show_bug.cgi?id=11789.
+  * Add Breaks for older versions of python-samba (<< 2:4.3.6+dfsg-2), because
+    of upstream bug https://bugzilla.samba.org/show_bug.cgi?id=11789.
 
  -- Jelmer Vernooij <jelmer@debian.org>  Mon, 04 Apr 2016 07:53:47 +1200
 
