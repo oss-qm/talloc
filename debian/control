@@ -55,6 +55,7 @@ Architecture: any
 Section: python
 Provides: ${python:Provides}
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
+Breaks: python-samba (<< 2:4.3.6+dfsg-2)
 Description: hierarchical pool based memory allocator - Python bindings
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
