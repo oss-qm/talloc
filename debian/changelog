@@ -5,7 +5,8 @@ talloc (2.1.6-1) UNRELEASED; urgency=medium
 
   [ Andrew Bartlett ]
   * New upstream release.
-  * Remove python3-talloc for now (trying to remove the SOABI caused other issues).
+  * Remove python3-talloc for now (trying to remove the SOABI caused other
+    issues).
 
  -- Jelmer Vernooij <jelmer@debian.org>  Mon, 04 Apr 2016 07:53:47 +1200
 
