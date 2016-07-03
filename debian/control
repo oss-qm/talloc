@@ -3,7 +3,7 @@ Section: devel
 Priority: optional
 Maintainer: Debian Samba Maintainers <pkg-samba-maint@lists.alioth.debian.org>
 Uploaders: Jelmer Vernooĳ <jelmer@debian.org>, Christian Perrier <bubulle@debian.org>
-Homepage: http://talloc.samba.org/
+Homepage: https://talloc.samba.org/
 Build-Depends: debhelper (>= 9),
   docbook-xml, docbook-xsl, xsltproc,
   dh-exec,
