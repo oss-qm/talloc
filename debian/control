@@ -9,8 +9,7 @@ Build-Depends: debhelper (>= 9),
   dh-exec,
   dh-python,
   libpopt-dev,
-  python-dev (>= 2.6.6-3),
-  python3-dev,
+  python-dev (>= 2.6.6-3)
 Standards-Version: 3.9.7
 Vcs-Git: git://anonscm.debian.org/pkg-samba/talloc.git
 XS-Testsuite: autopkgtest

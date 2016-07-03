@@ -1,3 +1,10 @@
+talloc (2.1.7-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+  * Drop unnecessary dependency on python3-dev.
+
+ -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Jul 2016 19:51:49 +0000
+
 talloc (2.1.6-1) unstable; urgency=low
 
   [ Jelmer Vernooij ]
