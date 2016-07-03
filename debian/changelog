@@ -2,6 +2,7 @@ talloc (2.1.7-1) UNRELEASED; urgency=medium
 
   * New upstream release.
   * Drop unnecessary dependency on python3-dev.
+  * Bump standards version to 3.9.8 (no changes).
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Jul 2016 19:51:49 +0000
 
