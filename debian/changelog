@@ -1,12 +1,21 @@
-talloc (2.1.8-1) UNRELEASED; urgency=medium
+talloc (2.1.8-1) unstable; urgency=medium
 
   [ Jelmer Vernooĳ ]
   * Use https homepage for talloc.
 
   [ Mathieu Parent ]
   * New upstream release.
+    - Update symbols (no change)
+  * Add me to uploaders
+  * Remove XS-Testsuite header in debian/control
+  * Use secure Vcs-* uris
+  * Fix copyright-refers-to-symlink-license
+  * Enable all hardenings
+  * Override dh-exec-subst-unknown-variable
+  * Use https and verify upstream tarball from uscan
+  * Use automatic debug packages (-dbgsym)
 
- -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Jul 2016 20:12:55 +0000
+ -- Mathieu Parent <sathieu@debian.org>  Sat, 08 Oct 2016 23:16:09 +0200
 
 talloc (2.1.7-1) unstable; urgency=medium
 
