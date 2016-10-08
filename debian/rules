@@ -63,8 +63,7 @@ override_dh_auto_install:
 	mv libtalloc.a $(DESTDIR)/usr/lib/$(DEB_HOST_MULTIARCH)
 
 override_dh_strip:
-	dh_strip -plibtalloc2 --dbg-package=libtalloc2-dbg
-	dh_strip -ppython-talloc --dbg-package=python-talloc-dbg
+	dh_strip --dbgsym-migration='libtalloc2-dbg (<< 2.1.8-1~), python-talloc-dbg (<< 2.1.8-1~)'
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibtalloc2 -- -c4
