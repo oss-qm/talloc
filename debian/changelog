@@ -1,6 +1,10 @@
-talloc (2.1.7-2) UNRELEASED; urgency=medium
+talloc (2.1.8-1) UNRELEASED; urgency=medium
 
+  [ Jelmer Vernooĳ ]
   * Use https homepage for talloc.
+
+  [ Mathieu Parent ]
+  * New upstream release.
 
  -- Jelmer Vernooĳ <jelmer@debian.org>  Sun, 03 Jul 2016 20:12:55 +0000
 
