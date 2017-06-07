@@ -11,8 +11,12 @@ libpytalloc-util.so.2 #PACKAGE# #MINVER#
  PYTALLOC_UTIL_2.1.6@PYTALLOC_UTIL_2.1.6 2.1.6
  PYTALLOC_UTIL_2.1.7@PYTALLOC_UTIL_2.1.7 2.1.7
  PYTALLOC_UTIL_2.1.8@PYTALLOC_UTIL_2.1.8 2.1.8
+ PYTALLOC_UTIL_2.1.9@PYTALLOC_UTIL_2.1.9 2.1.9
+ _pytalloc_check_type@PYTALLOC_UTIL_2.1.9 2.1.9
  pytalloc_CObject_FromTallocPtr@PYTALLOC_UTIL_2.0.6 2.0.6
  pytalloc_Check@PYTALLOC_UTIL_2.0.6 2.0.6
+ pytalloc_GenericObject_reference_ex@PYTALLOC_UTIL_2.1.9 2.1.9
+ pytalloc_GenericObject_steal_ex@PYTALLOC_UTIL_2.1.9 2.1.9
  pytalloc_GetObjectType@PYTALLOC_UTIL_2.0.6 2.0.6
  pytalloc_reference_ex@PYTALLOC_UTIL_2.0.6 2.0.6
  pytalloc_steal@PYTALLOC_UTIL_2.0.6 2.0.6
