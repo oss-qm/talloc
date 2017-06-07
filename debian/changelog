@@ -1,3 +1,10 @@
+talloc (2.1.9-1) experimental; urgency=medium
+
+  * New upstream version 2.1.9
+  * Updating symbols
+
+ -- Mathieu Parent <sathieu@debian.org>  Thu, 08 Jun 2017 22:41:31 +0200
+
 talloc (2.1.8-1) unstable; urgency=medium
 
   [ Jelmer Vernooĳ ]
