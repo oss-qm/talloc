@@ -1,3 +1,9 @@
+talloc (2.1.9-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Mathieu Parent <sathieu@debian.org>  Mon, 19 Jun 2017 17:19:07 +0200
+
 talloc (2.1.9-1) experimental; urgency=medium
 
   * New upstream version 2.1.9
