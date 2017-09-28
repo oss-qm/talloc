@@ -1,9 +1,11 @@
-talloc (2.1.9-3) UNRELEASED; urgency=medium
+talloc (2.1.10-1) experimental; urgency=medium
 
+  * New upstream version 2.1.10
+    - Update symbols (no change)
   * Use https form of the copyright-format URL (Debian Policy 4.0.0)
   * Standards-Version: 4.0.0
 
- -- Mathieu Parent <sathieu@debian.org>  Tue, 27 Jun 2017 14:59:06 +0200
+ -- Mathieu Parent <sathieu@debian.org>  Thu, 28 Sep 2017 23:08:38 +0200
 
 talloc (2.1.9-2) unstable; urgency=medium
 
