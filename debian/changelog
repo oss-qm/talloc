@@ -1,3 +1,9 @@
+talloc (2.1.10-2) unstable; urgency=medium
+
+  * Upload to sid
+
+ -- Mathieu Parent <sathieu@debian.org>  Thu, 26 Oct 2017 10:25:44 +0200
+
 talloc (2.1.10-1) experimental; urgency=medium
 
   * New upstream version 2.1.10
