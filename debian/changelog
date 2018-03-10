@@ -1,3 +1,16 @@
+talloc (2.1.11-1) experimental; urgency=medium
+
+  * New upstream version 2.1.11
+    - Update symbols (no change)
+  * Upload to experimental
+  * Repository moved to salsa: Update Vcs-* fields
+  * Fix global-files-wildcard-not-first-paragraph-in-dep5-copyright
+  * Move to debhelper 11, no expected change
+    - remove "dh --parallel", not needed in compat 11
+  * Standards-Version: 4.1.3, no change
+
+ -- Mathieu Parent <sathieu@debian.org>  Sun, 11 Mar 2018 21:04:04 +0100
+
 talloc (2.1.10-2) unstable; urgency=medium
 
   * Upload to sid
