@@ -17,12 +17,13 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 conf_args = --prefix=/usr --disable-rpath-install --disable-rpath --bundled-libraries=NONE
 conf_args += --build $(DEB_BUILD_GNU_TYPE) --host $(DEB_HOST_GNU_TYPE)
 conf_args += --libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
+conf_args += --extra-python=python3
 conf_args += -v
 
 export PYTHON="$(shell which `pyversions -d`)"
 
 %:
-	dh $* --with python2
+	dh $* --with python2,python3
 
 override_dh_python2:
 	dh_python2 --no-guessing-versions
@@ -40,6 +41,7 @@ endif
 
 override_dh_install:
 	DEB_PY2_INCDIR=$(shell python-config --includes | sed 's,^-I\([^ ]*\).*,\1,') \
+	DEB_PY3_INCDIR=$(shell python3-config --includes | sed 's,^-I\([^ ]*\).*,\1,') \
 		dh_install --list-missing
 
 get-packaged-orig-source:
@@ -68,4 +70,4 @@ override_dh_strip:
 
 override_dh_makeshlibs:
 	dh_makeshlibs -plibtalloc2 -- -c4
-	dh_makeshlibs -ppython-talloc -Xtalloc. -- -c3
+	dh_makeshlibs -ppython-talloc -ppython3-talloc -Xtalloc. -- -c3
