@@ -1,3 +1,20 @@
+talloc (2.1.13-1) experimental; urgency=medium
+
+  [ Timo Aaltonen ]
+  * Add py3 support back (Closes: #802484, #814928)
+
+  [ Mathieu Parent ]
+  * New upstream version 2.1.13
+    - Update symbols (no change)
+  * Update Standards-Version to 4.1.4, no change
+  * Mark libtalloc-dev and python{,3}-talloc{,dev} "Multi-Arch: same"
+  * Run wrap-and-sort
+  * Drop d/patches/series (pytalloc-util-name.diff missing)
+  * Fix lintian overrides
+  * Upload to experimental, as python3 changes are risky
+
+ -- Mathieu Parent <sathieu@debian.org>  Sun, 01 Jul 2018 09:28:27 +0200
+
 talloc (2.1.11-2) unstable; urgency=low
 
   * Upload to unstable
