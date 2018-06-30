@@ -454,7 +454,8 @@ def CHECK_CODE(conf, code, define,
 
 @conf
 def CHECK_STRUCTURE_MEMBER(conf, structname, member,
-                           always=False, define=None, headers=None):
+                           always=False, define=None, headers=None,
+                           lib=None):
     '''check for a structure member'''
     if define is None:
         define = 'HAVE_%s' % member.upper()
@@ -463,6 +464,7 @@ def CHECK_STRUCTURE_MEMBER(conf, structname, member,
                       define,
                       execute=False,
                       link=False,
+                      lib=lib,
                       always=always,
                       headers=headers,
                       local_include=False,
@@ -708,6 +710,8 @@ def SAMBA_CONFIG_H(conf, path=None):
         conf.ADD_CFLAGS('-Werror=return-type -Wreturn-type',
                         testflags=True)
         conf.ADD_CFLAGS('-Werror=uninitialized -Wuninitialized',
+                        testflags=True)
+        conf.ADD_CFLAGS('-Wimplicit-fallthrough',
                         testflags=True)
 
         conf.ADD_CFLAGS('-Wformat=2 -Wno-format-y2k', testflags=True)
