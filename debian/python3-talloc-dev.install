@@ -1,0 +1,4 @@
+#! /usr/bin/dh-exec
+usr/include/pytalloc.h ${DEB_PY3_INCDIR}
+usr/lib/*/pkgconfig/pytalloc-util.cpython-*.pc
+usr/lib/*/libpytalloc-util.cpython*.so

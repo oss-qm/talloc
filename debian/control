@@ -9,7 +9,8 @@ Build-Depends: debhelper (>= 11),
   dh-exec,
   dh-python,
   libpopt-dev,
-  python-dev (>= 2.6.6-3)
+  python-dev (>= 2.6.6-3),
+  python3-dev,
 Standards-Version: 4.1.3
 Vcs-Browser: https://salsa.debian.org/samba-team/talloc
 Vcs-Git: https://salsa.debian.org/samba-team/talloc.git
@@ -56,3 +57,25 @@ Description: talloc Python bindings - development files
  reference counting to determine when memory should be freed.
  .
  This package contains the development files for the Python bindings.
+
+Package: python3-talloc
+Pre-Depends: ${misc:Pre-Depends}
+Architecture: any
+Section: python
+Provides: ${python3:Provides}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}
+Description: hierarchical pool based memory allocator - Python3 bindings
+ A hierarchical pool based memory allocator with destructors. It uses
+ reference counting to determine when memory should be freed.
+ .
+ This package contains the Python3 bindings.
+
+Package: python3-talloc-dev
+Architecture: any
+Section: libdevel
+Depends: python3-talloc (= ${binary:Version}), ${misc:Depends}, pkg-config
+Description: talloc Python3 bindings - development files
+ A hierarchical pool based memory allocator with destructors. It uses
+ reference counting to determine when memory should be freed.
+ .
+ This package contains the development files for the Python3 bindings.
