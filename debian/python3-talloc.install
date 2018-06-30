@@ -1,2 +1,2 @@
-usr/lib/python3/dist-packages/talloc.cpython*.so
 usr/lib/*/libpytalloc-util.cpython*.so.*
+usr/lib/python3/dist-packages/talloc.cpython*.so

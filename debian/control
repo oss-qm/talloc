@@ -2,15 +2,19 @@ Source: talloc
 Section: devel
 Priority: optional
 Maintainer: Debian Samba Maintainers <pkg-samba-maint@lists.alioth.debian.org>
-Uploaders: Jelmer Vernooĳ <jelmer@debian.org>, Christian Perrier <bubulle@debian.org>, Mathieu Parent <sathieu@debian.org>
+Uploaders: Jelmer Vernooĳ <jelmer@debian.org>,
+           Christian Perrier <bubulle@debian.org>,
+           Mathieu Parent <sathieu@debian.org>
 Homepage: https://talloc.samba.org/
 Build-Depends: debhelper (>= 11),
-  docbook-xml, docbook-xsl, xsltproc,
-  dh-exec,
-  dh-python,
-  libpopt-dev,
-  python-dev (>= 2.6.6-3),
-  python3-dev,
+               dh-exec,
+               dh-python,
+               docbook-xml,
+               docbook-xsl,
+               libpopt-dev,
+               python-dev (>= 2.6.6-3),
+               python3-dev,
+               xsltproc
 Standards-Version: 4.1.4
 Vcs-Browser: https://salsa.debian.org/samba-team/talloc
 Vcs-Git: https://salsa.debian.org/samba-team/talloc.git
@@ -19,7 +23,7 @@ Package: libtalloc2
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Section: libs
 Description: hierarchical pool based memory allocator
  A hierarchical pool based memory allocator with destructors. It uses
@@ -27,7 +31,7 @@ Description: hierarchical pool based memory allocator
 
 Package: libtalloc-dev
 Section: libdevel
-Depends: libtalloc2 (=${binary:Version}), ${misc:Depends}, pkg-config
+Depends: libtalloc2 (=${binary:Version}), pkg-config, ${misc:Depends}
 Architecture: any
 Multi-Arch: same
 Description: hierarchical pool based memory allocator - development files
@@ -42,7 +46,7 @@ Architecture: any
 Multi-Arch: same
 Section: python
 Provides: ${python:Provides}
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
+Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Breaks: python-samba (<< 2:4.3.6+dfsg-2)
 Description: hierarchical pool based memory allocator - Python bindings
  A hierarchical pool based memory allocator with destructors. It uses
@@ -54,7 +58,7 @@ Package: python-talloc-dev
 Architecture: any
 Multi-Arch: same
 Section: libdevel
-Depends: python-talloc (= ${binary:Version}), ${misc:Depends}, pkg-config
+Depends: pkg-config, python-talloc (= ${binary:Version}), ${misc:Depends}
 Description: talloc Python bindings - development files
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
@@ -67,7 +71,7 @@ Architecture: any
 Multi-Arch: same
 Section: python
 Provides: ${python3:Provides}
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
 Description: hierarchical pool based memory allocator - Python3 bindings
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
@@ -78,7 +82,7 @@ Package: python3-talloc-dev
 Architecture: any
 Multi-Arch: same
 Section: libdevel
-Depends: python3-talloc (= ${binary:Version}), ${misc:Depends}, pkg-config
+Depends: pkg-config, python3-talloc (= ${binary:Version}), ${misc:Depends}
 Description: talloc Python3 bindings - development files
  A hierarchical pool based memory allocator with destructors. It uses
  reference counting to determine when memory should be freed.
