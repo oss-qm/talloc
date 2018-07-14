@@ -23,6 +23,7 @@ Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
+Breaks: python3-talloc (<< 2.1.13-2~)
 Section: libs
 Description: hierarchical pool based memory allocator
  A hierarchical pool based memory allocator with destructors. It uses
