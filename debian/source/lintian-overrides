@@ -1,3 +1,2 @@
 # Variable defined in debian/rules
 talloc source: dh-exec-subst-unknown-variable debian/python-talloc-dev.install DEB_PY2_INCDIR
-talloc source: dh-exec-subst-unknown-variable debian/python3-talloc-dev.install DEB_PY3_INCDIR
