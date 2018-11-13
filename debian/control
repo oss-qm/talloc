@@ -6,7 +6,7 @@ Uploaders: Jelmer Vernooĳ <jelmer@debian.org>,
            Christian Perrier <bubulle@debian.org>,
            Mathieu Parent <sathieu@debian.org>
 Homepage: https://talloc.samba.org/
-Build-Depends: debhelper (>= 11),
+Build-Depends: debhelper (>= 10),
                dh-exec,
                dh-python,
                docbook-xml,
